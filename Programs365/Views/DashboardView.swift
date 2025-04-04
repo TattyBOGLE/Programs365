@@ -22,6 +22,11 @@ struct DashboardView: View {
                 .tabItem {
                     Label("Injury", systemImage: "bandage.fill")
                 }
+            
+            MoreView()
+                .tabItem {
+                    Label("More", systemImage: "ellipsis.circle.fill")
+                }
         }
     }
 }

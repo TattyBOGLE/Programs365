@@ -88,8 +88,8 @@ struct LandingView: View {
                     
                     VStack(alignment: .leading, spacing: 16) {
                         Spacer()
-                        Text("2026")
-                            .font(.system(size: 86, weight: .heavy))
+                        Text("Track&Field365")
+                            .font(.system(size: 64, weight: .heavy))
                             .foregroundColor(.red)
                             .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 2)
                         

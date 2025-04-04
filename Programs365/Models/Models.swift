@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum AgeGroup: String, CaseIterable, Identifiable {
     case u12 = "U12"
@@ -170,6 +171,7 @@ struct Injury: Identifiable {
     let severity: Severity
     let status: Status
     let notes: String?
+    let eventCategory: String
     
     enum Severity: String {
         case mild = "Mild"
@@ -188,4 +190,19 @@ struct UserStats {
     let workouts: Int
     let hours: Int
     let personalBests: Int
+}
+
+// Shared enums and models
+enum TimeFrame: String, CaseIterable {
+    case week = "Week"
+    case month = "Month"
+    case year = "Year"
+    case allTime = "All Time"
+}
+
+enum TrainingMetric: String, CaseIterable {
+    case distance = "Distance"
+    case time = "Time"
+    case intensity = "Intensity"
+    case volume = "Volume"
 } 

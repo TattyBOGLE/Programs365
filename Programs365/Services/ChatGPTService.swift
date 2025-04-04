@@ -67,14 +67,14 @@ final class ChatGPTService: ObservableObject {
         
         wifiMonitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor in
-                self?.hasWiFi = path.status == .satisfied
+                await self?.updateWiFiStatus(path.status == .satisfied)
                 print("WiFi Status: \(path.status)")
             }
         }
         
         cellularMonitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor in
-                self?.hasCellular = path.status == .satisfied
+                await self?.updateCellularStatus(path.status == .satisfied)
                 print("Cellular Status: \(path.status)")
             }
         }
@@ -93,7 +93,17 @@ final class ChatGPTService: ObservableObject {
     }
     
     @MainActor
-    private func updateNetworkStatus(_ path: NWPath) {
+    private func updateWiFiStatus(_ isAvailable: Bool) async {
+        self.hasWiFi = isAvailable
+    }
+    
+    @MainActor
+    private func updateCellularStatus(_ isAvailable: Bool) async {
+        self.hasCellular = isAvailable
+    }
+    
+    @MainActor
+    private func updateNetworkStatus(_ path: NWPath) async {
         self.networkStatus = path.status
         self.isOffline = path.status != .satisfied
         
@@ -146,151 +156,116 @@ final class ChatGPTService: ObservableObject {
     }
     
     private func formatResponse(_ response: String) -> AttributedString {
+        print("ChatGPTService: Starting to format response of length: \(response.count)")
+        print("ChatGPTService: Raw response: \(response)")
         var result = AttributedString()
         
         let sections = response.components(separatedBy: "\n\n")
-        for section in sections {
-            if section.hasPrefix("5.") { // Safety section
-                // Create a warning box effect
-                var warningBox = AttributedString("\n⚠️ SAFETY CONSIDERATIONS ⚠️\n")
-                warningBox.foregroundColor = .red
-                warningBox.font = .system(.title2, design: .default, weight: .bold)
+        print("ChatGPTService: Found \(sections.count) sections to format")
+        
+        for (index, section) in sections.enumerated() {
+            print("ChatGPTService: Processing section \(index + 1): \(section)")
+            
+            // Check if section starts with any day of the week
+            let daysOfWeek = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
+            if daysOfWeek.contains(where: { section.hasPrefix($0) }) {
+                print("ChatGPTService: Found day section")
+                let lines = section.split(separator: "\n")
+                guard !lines.isEmpty else { continue }
                 
-                // Add a top border
-                var topBorder = AttributedString("\n▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔\n")
-                topBorder.foregroundColor = .red
-                
-                result += topBorder + warningBox
-                
-                // Rest of the safety content with special formatting
-                let content = section.split(separator: "\n").dropFirst().joined(separator: "\n")
-                var contentStr = AttributedString("\n" + content + "\n")
-                
-                // Format subheadings in safety section
-                if let regex = try? NSRegularExpression(pattern: "[A-Za-z -]+:", options: []) {
-                    let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
-                    let matches = regex.matches(in: content, options: [], range: nsRange)
-                    for match in matches {
-                        if let range = Range(match.range, in: content),
-                           let lowerBound = AttributedString.Index(range.lowerBound, within: contentStr),
-                           let upperBound = AttributedString.Index(range.upperBound, within: contentStr) {
-                            let attributedRange = lowerBound..<upperBound
-                            contentStr[attributedRange].font = .system(.body, design: .default, weight: .bold)
-                            contentStr[attributedRange].foregroundColor = .red
-                        }
-                    }
-                }
-                
-                // Format bullet points with warning symbols
-                if let regex = try? NSRegularExpression(pattern: "^[ ]*[•*-].*$", options: [.anchorsMatchLines]) {
-                    let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
-                    let matches = regex.matches(in: content, options: [], range: nsRange)
-                    for match in matches {
-                        if let range = Range(match.range, in: content),
-                           let lowerBound = AttributedString.Index(range.lowerBound, within: contentStr),
-                           let upperBound = AttributedString.Index(range.upperBound, within: contentStr) {
-                            var line = String(content[range])
-                            let indent = line.prefix(while: { $0 == " " }).count
-                            
-                            // Replace bullet with warning symbol
-                            if line.contains("*") {
-                                line = line.replacingOccurrences(of: "*", with: "⚠️")
-                            } else if line.contains("-") {
-                                line = line.replacingOccurrences(of: "-", with: "⚠️")
-                            } else if line.contains("•") {
-                                line = line.replacingOccurrences(of: "•", with: "⚠️")
-                            }
-                            
-                            // Ensure consistent indentation
-                            let totalPadding = max(indent, 4) // Minimum 4 spaces of indentation
-                            
-                            let wrappedContent = line.replacingOccurrences(
-                                of: "\n",
-                                with: "\n" + String(repeating: " ", count: totalPadding)
-                            )
-                            let attributedRange = lowerBound..<upperBound
-                            contentStr.replaceSubrange(attributedRange, with: AttributedString(wrappedContent))
-                        }
-                    }
-                }
-                
-                result += contentStr
-                
-                // Add a bottom border
-                var bottomBorder = AttributedString("\n▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁\n\n")
-                bottomBorder.foregroundColor = .red
-                result += bottomBorder
-                
-            } else if section.hasPrefix("1.") || section.hasPrefix("2.") || section.hasPrefix("3.") || 
-                      section.hasPrefix("4.") {
-                // Main section headers (red and bold)
-                var header = AttributedString(section.split(separator: "\n")[0])
+                // Day header
+                var header = AttributedString(lines[0])
                 header.foregroundColor = .red
-                header.font = .system(.title2, design: .default, weight: .bold)
-                result += header + "\n"
+                header.font = .system(.title, design: .default, weight: .bold)
+                result += header + "\n\n"
                 
-                // Rest of the section content
-                let content = section.split(separator: "\n").dropFirst().joined(separator: "\n")
+                // Focus line
+                if let focusLine = lines.first(where: { $0.hasPrefix("Focus:") }) {
+                    print("ChatGPTService: Found Focus line: \(focusLine)")
+                    var focus = AttributedString(focusLine)
+                    focus.foregroundColor = .white
+                    focus.font = .system(.headline, design: .default, weight: .medium)
+                    result += focus + "\n\n"
+                }
+                
+                // Main content
+                let content = lines.dropFirst(2).joined(separator: "\n")
+                print("ChatGPTService: Processing main content of length: \(content.count)")
                 var contentStr = AttributedString("\n" + content + "\n")
                 
-                // Format subheadings
-                if let regex = try? NSRegularExpression(pattern: "[A-Za-z -]+:", options: []) {
+                // Format section headers (Warm-Up, Aerobic/Extensive Work, etc.)
+                if let regex = try? NSRegularExpression(pattern: "^\\s*[A-Za-z/ ]+ \\([0-9- ]+.*\\)$", options: [.anchorsMatchLines]) {
                     let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
                     let matches = regex.matches(in: content, options: [], range: nsRange)
+                    print("ChatGPTService: Found \(matches.count) section headers")
                     for match in matches {
                         if let range = Range(match.range, in: content),
                            let lowerBound = AttributedString.Index(range.lowerBound, within: contentStr),
                            let upperBound = AttributedString.Index(range.upperBound, within: contentStr) {
                             let attributedRange = lowerBound..<upperBound
-                            contentStr[attributedRange].font = .system(.body, design: .default, weight: .bold)
+                            contentStr[attributedRange].foregroundColor = .red
+                            contentStr[attributedRange].font = .system(.headline, design: .default, weight: .bold)
                         }
                     }
                 }
                 
-                // Format bullet points and ensure alignment
-                if let regex = try? NSRegularExpression(pattern: "^[ ]*[•*-].*$", options: [.anchorsMatchLines]) {
+                // Format exercise names and options
+                if let regex = try? NSRegularExpression(pattern: "^\\s*[A-Za-z ]+:.*$", options: [.anchorsMatchLines]) {
                     let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
                     let matches = regex.matches(in: content, options: [], range: nsRange)
+                    print("ChatGPTService: Found \(matches.count) exercise names")
                     for match in matches {
                         if let range = Range(match.range, in: content),
                            let lowerBound = AttributedString.Index(range.lowerBound, within: contentStr),
                            let upperBound = AttributedString.Index(range.upperBound, within: contentStr) {
-                            let line = String(content[range])
-                            let indent = line.prefix(while: { $0 == " " }).count
-                            
-                            // Ensure consistent indentation
-                            let totalPadding = max(indent, 4) // Minimum 4 spaces of indentation
-                            
-                            let wrappedContent = line.replacingOccurrences(
-                                of: "\n",
-                                with: "\n" + String(repeating: " ", count: totalPadding)
-                            )
                             let attributedRange = lowerBound..<upperBound
-                            contentStr.replaceSubrange(attributedRange, with: AttributedString(wrappedContent))
+                            contentStr[attributedRange].foregroundColor = .white
+                            contentStr[attributedRange].font = .system(.body, design: .default, weight: .medium)
                         }
                     }
                 }
                 
-                // Add extra spacing between sections
+                // Format exercise details
+                if let regex = try? NSRegularExpression(pattern: "^\\s*[•\\-\\*]\\s*.*$", options: [.anchorsMatchLines]) {
+                    let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
+                    let matches = regex.matches(in: content, options: [], range: nsRange)
+                    print("ChatGPTService: Found \(matches.count) exercise details")
+                    for match in matches {
+                        if let range = Range(match.range, in: content),
+                           let lowerBound = AttributedString.Index(range.lowerBound, within: contentStr),
+                           let upperBound = AttributedString.Index(range.upperBound, within: contentStr) {
+                            let attributedRange = lowerBound..<upperBound
+                            contentStr[attributedRange].foregroundColor = .gray
+                            contentStr[attributedRange].font = .system(.body, design: .default)
+                        }
+                    }
+                }
+                
                 result += contentStr + "\n\n"
-                
-                // Add horizontal line between sections
-                var separator = AttributedString("\n―――――――――――――――――――――――――――\n\n")
-                separator.foregroundColor = .gray
-                result += separator
+            } else {
+                print("ChatGPTService: Section \(index + 1) does not start with a day of the week")
+                // Add non-day content with default formatting
+                var contentStr = AttributedString(section)
+                contentStr.foregroundColor = .white
+                result += contentStr + "\n\n"
             }
         }
         
+        print("ChatGPTService: Finished formatting response")
+        print("ChatGPTService: Final formatted content length: \(result.characters.count)")
         return result
     }
     
-    @MainActor
-    private func updateProgress(_ value: Double) {
-        self.progress = min(max(value, 0), 1)
+    private func updateProgress(_ value: Double) async {
+        await MainActor.run {
+            self.progress = min(max(value, 0), 1)
+        }
     }
     
     func generateWorkoutPlan(prompt: String, retryCount: Int = 0) async throws -> AttributedString {
         print("ChatGPTService: Starting workout plan generation")
+        print("ChatGPTService: Using API key of length: \(apiKey.count)")
+        print("ChatGPTService: Prompt length: \(prompt.count)")
         
         // Check cache first
         let cacheKey = "\(prompt)"
@@ -300,22 +275,25 @@ final class ChatGPTService: ObservableObject {
         }
         
         // Reset progress
-        updateProgress(0)
+        await MainActor.run {
+            self.progress = 0
+        }
         print("ChatGPTService: Progress reset to 0")
         
-        // Start progress updates
-        let progressTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                if let progress = await self?.progress {
-                    self?.updateProgress(progress + 0.05)
+        // Create a Task for progress updates
+        let progressTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+                if self.progress < 0.95 {
+                    self.progress += 0.05
                 }
             }
         }
         
         defer {
-            progressTimer.invalidate()
+            progressTask.cancel()
             Task { @MainActor in
-                updateProgress(1.0)
+                self.progress = 1.0
             }
         }
         
@@ -340,16 +318,28 @@ final class ChatGPTService: ObservableObject {
         
         print("ChatGPTService: Headers prepared with API key length: \(apiKey.count)")
         
+        let event = extractEvent(from: prompt)
         let body: [String: Any] = [
             "model": "gpt-3.5-turbo",
             "messages": [
                 ["role": "system", "content": """
-                You are a professional track and field coach.
+                You are a professional track and field coach specializing in \(event) training.
                 Format your response exactly as shown in the template.
                 Use proper bullet points (•) and consistent indentation.
                 Include specific numbers for all sets, reps, and intensities.
                 Separate days with clear headers using an en dash (–).
                 Keep workouts appropriate for the specified age group and event.
+                
+                For Triple Jump specifically:
+                - Focus on the three phases: hop, step, and jump
+                - Include phase-specific drills and exercises
+                - Emphasize proper landing mechanics
+                - Include approach run practice
+                - Add plyometric exercises for power development
+                - Include core stability work
+                - Adapt training volume based on age group
+                - Include injury prevention exercises
+                - Focus on technical mastery
                 """],
                 ["role": "user", "content": prompt]
             ],
@@ -391,6 +381,9 @@ final class ChatGPTService: ObservableObject {
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             print("ChatGPTService: Request body serialized successfully")
+            if let bodyString = String(data: request.httpBody!, encoding: .utf8) {
+                print("ChatGPTService: Request body: \(bodyString)")
+            }
         } catch {
             print("ChatGPTService: Serialization error: \(error)")
             throw ChatGPTError.serializationError(error)
@@ -420,7 +413,12 @@ final class ChatGPTService: ObservableObject {
                         throw ChatGPTError.invalidResponse
                     }
                     
-                    print("Response status code: \(httpResponse.statusCode)")
+                    print("ChatGPTService: Response status code: \(httpResponse.statusCode)")
+                    
+                    // Print raw response data for debugging
+                    if let rawResponse = String(data: data, encoding: .utf8) {
+                        print("ChatGPTService: Raw API response: \(rawResponse)")
+                    }
                     
                     switch httpResponse.statusCode {
                     case 200...299:
@@ -435,24 +433,38 @@ final class ChatGPTService: ObservableObject {
                         }
                         
                         let decoder = JSONDecoder()
-                        let chatGPTResponse = try decoder.decode(ChatGPTResponse.self, from: data)
-                        return chatGPTResponse.choices.first?.message.content ?? "No response generated"
+                        do {
+                            let chatGPTResponse = try decoder.decode(ChatGPTResponse.self, from: data)
+                            guard let content = chatGPTResponse.choices.first?.message.content else {
+                                print("ChatGPTService: No content in response choices")
+                                throw ChatGPTError.invalidResponse
+                            }
+                            print("ChatGPTService: Successfully decoded response with content length: \(content.count)")
+                            return content
+                        } catch {
+                            print("ChatGPTService: Failed to decode response: \(error)")
+                            throw ChatGPTError.invalidResponse
+                        }
                         
                     case 401:
+                        print("ChatGPTService: Authentication error")
                         throw ChatGPTError.authenticationError("Invalid API key")
                     case 429:
+                        print("ChatGPTService: Rate limit error")
                         if retryCount < 3 {
                             try await Task.sleep(nanoseconds: retryDelay)
                             return try await generateWorkoutPlan(prompt: prompt, retryCount: retryCount + 1).description
                         }
                         throw ChatGPTError.rateLimitError("Too many requests. Please wait a moment and try again.")
                     case 500...599:
+                        print("ChatGPTService: Server error")
                         if retryCount < 3 {
                             try await Task.sleep(nanoseconds: retryDelay)
                             return try await generateWorkoutPlan(prompt: prompt, retryCount: retryCount + 1).description
                         }
                         throw ChatGPTError.serverError("Server error. Please try again in a few moments.")
                     default:
+                        print("ChatGPTService: Unexpected status code: \(httpResponse.statusCode)")
                         throw ChatGPTError.httpError(httpResponse.statusCode)
                     }
                 } catch let error as ChatGPTError {

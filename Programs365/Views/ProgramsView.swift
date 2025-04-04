@@ -176,7 +176,9 @@ struct WeeksList: View {
                     Button(action: {
                         selectedWeek = week
                         showingSheet = true
-                        generateProgram(week: week)
+                        Task {
+                            await generateProgram(week: week)
+                        }
                     }) {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Week \(week)")
@@ -207,41 +209,67 @@ struct WeeksList: View {
                 ScrollView {
                     if isLoading {
                         VStack(spacing: 20) {
-                            ProgressView()
-                                .scaleEffect(1.5)
-                                .tint(.red)
+                            Text("Generating Program")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
                             
                             GeometryReader { geometry in
                                 ZStack(alignment: .leading) {
                                     // Background track
                                     Rectangle()
-                                        .frame(width: geometry.size.width, height: 4)
+                                        .frame(width: geometry.size.width, height: 8)
                                         .opacity(0.3)
                                         .foregroundColor(.gray)
+                                        .cornerRadius(4)
                                     
                                     // Progress bar
                                     Rectangle()
-                                        .frame(width: min(CGFloat(chatGPTService.progress) * geometry.size.width, geometry.size.width), height: 4)
+                                        .frame(width: min(CGFloat(chatGPTService.progress) * geometry.size.width, geometry.size.width), height: 8)
                                         .foregroundColor(.red)
+                                        .cornerRadius(4)
                                     
-                                    // Running man
-                                    Image(systemName: "figure.run")
-                                        .font(.system(size: 30))
-                                        .foregroundColor(.red)
-                                        .offset(x: min(CGFloat(chatGPTService.progress) * (geometry.size.width - 30), geometry.size.width - 30), y: -20)
+                                    // Triple Jump Animation
+                                    HStack(spacing: 0) {
+                                        // Phase 1: Hop
+                                        Image(systemName: "figure.jumprope")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.red)
+                                            .rotationEffect(.degrees(chatGPTService.progress < 0.33 ? 0 : -15))
+                                            .offset(y: chatGPTService.progress < 0.33 ? -30 : 0)
+                                            .opacity(chatGPTService.progress < 0.33 ? 1 : 0)
+                                        
+                                        // Phase 2: Step
+                                        Image(systemName: "figure.step.training")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.red)
+                                            .rotationEffect(.degrees(chatGPTService.progress >= 0.33 && chatGPTService.progress < 0.66 ? -15 : 0))
+                                            .offset(y: chatGPTService.progress >= 0.33 && chatGPTService.progress < 0.66 ? -25 : 0)
+                                            .opacity(chatGPTService.progress >= 0.33 && chatGPTService.progress < 0.66 ? 1 : 0)
+                                        
+                                        // Phase 3: Jump
+                                        Image(systemName: "figure.gymnastics")
+                                            .font(.system(size: 40))
+                                            .foregroundColor(.red)
+                                            .rotationEffect(.degrees(chatGPTService.progress >= 0.66 ? -30 : 0))
+                                            .offset(y: chatGPTService.progress >= 0.66 ? -35 : 0)
+                                            .opacity(chatGPTService.progress >= 0.66 ? 1 : 0)
+                                    }
+                                    .offset(x: min(CGFloat(chatGPTService.progress) * (geometry.size.width - 40), geometry.size.width - 40))
                                 }
                             }
-                            .frame(height: 40)
+                            .frame(height: 100)
                             .padding(.horizontal, 40)
                             
-                            // Percentage text
-                            Text("\(Int(chatGPTService.progress * 100))%")
-                                .font(.caption)
+                            // Progress text with phase indication
+                            Text("\(Int(chatGPTService.progress * 100))% - \(getPhaseText(progress: chatGPTService.progress))")
+                                .font(.headline)
                                 .foregroundColor(.red)
                                 .fontWeight(.bold)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding()
+                        .background(Color.black)
                     } else if let error = error {
                         VStack(spacing: 20) {
                             Image(systemName: "exclamationmark.triangle")
@@ -254,7 +282,9 @@ struct WeeksList: View {
                             
                             Button(action: {
                                 if let week = selectedWeek {
-                                    generateProgram(week: week)
+                                    Task {
+                                        await generateProgram(week: week)
+                                    }
                                 }
                             }) {
                                 Text("Try Again")
@@ -292,101 +322,236 @@ struct WeeksList: View {
         
         // Add a small delay before retrying to prevent rapid retries
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            generateProgram(week: week)
+            Task {
+                await generateProgram(week: week)
+            }
             isRetrying = false
         }
     }
     
-    private func generateProgram(week: Int) {
+    private func generateProgram(week: Int) async {
         print("WeeksList: Starting program generation for week \(week)")
         isLoading = true
         error = nil
         
-        Task {
-            do {
-                print("WeeksList: Preparing to generate workout plan...")
-                // If we previously had a network error, wait a moment before trying again
-                if hasAttemptedReconnection {
-                    print("WeeksList: Had previous connection attempt, waiting 2 seconds...")
-                    try await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                }
+        let prompt = """
+        Generate a detailed training program for \(ageGroup) \(event) athletes for \(term) Term, \(period) Period, Week \(week).
+        
+        Format each day exactly as shown in this template:
+        
+        MONDAY
+        Focus: Approach Run and Hop Phase Technique
+        
+        Warm-Up (15-20 minutes):
+        • Easy jog: 800m
+        • Dynamic stretches: 10 minutes
+        • Mobility exercises: 5 minutes
+        • Triple jump specific drills: 5 minutes
+        
+        Technical Work (30-40 minutes):
+        • Approach run practice: 6-8 runs at 75% speed
+        • Hop phase drills: 3 sets of 4 reps
+        • Single leg bounds: 3 sets of 30m
+        • Landing mechanics work: 4 sets of 6 reps
+        
+        Strength/Power Development (20-25 minutes):
+        • Box jumps: 4 sets of 6 reps
+        • Single leg press: 3 sets of 8 each leg
+        • Core stability circuit: 3 rounds
+        
+        Cool-Down (10-15 minutes):
+        • Light jog: 400m
+        • Static stretches: 8-10 minutes
+        • Recovery walk: 5 minutes
+        
+        TUESDAY
+        Focus: Step Phase Development and Strength
+        
+        Warm-Up (15-20 minutes):
+        • Easy jog: 800m
+        • Dynamic stretches: 10 minutes
+        • Coordination drills: 5 minutes
+        • Step phase specific drills: 5 minutes
+        
+        Technical Work (30-40 minutes):
+        • Step phase technique drills: 4 sets of 6 reps
+        • Rhythm bounds: 4 sets of 30m
+        • Connection drills (hop to step): 3 sets of 4 reps
+        • Technical positioning work: 4 sets
+        
+        Strength/Power Development (20-25 minutes):
+        • Split squats: 3 sets of 8 each leg
+        • Plyometric lunges: 3 sets of 6 each leg
+        • Medicine ball exercises: 3 sets of 8 reps
+        
+        Cool-Down (10-15 minutes):
+        • Light jog: 400m
+        • Static stretches: 8-10 minutes
+        • Recovery walk: 5 minutes
+        
+        WEDNESDAY
+        Focus: Jump Phase and Full Technique
+        
+        Warm-Up (15-20 minutes):
+        • Easy jog: 800m
+        • Dynamic stretches: 10 minutes
+        • Jump-specific mobility: 5 minutes
+        • Coordination drills: 5 minutes
+        
+        Technical Work (30-40 minutes):
+        • Jump phase drills: 4 sets of 6 reps
+        • Full approach runs: 4-6 runs at 80% speed
+        • Full triple jump practice: 3-4 attempts
+        • Landing pit work: 3 sets of 6 reps
+        
+        Strength/Power Development (20-25 minutes):
+        • Depth jumps: 3 sets of 6 reps
+        • Reactive strength exercises: 4 sets
+        • Core and hip stability work: 3 rounds
+        
+        Cool-Down (10-15 minutes):
+        • Light jog: 400m
+        • Static stretches: 8-10 minutes
+        • Recovery walk: 5 minutes
+        
+        THURSDAY
+        Focus: Speed and Power Development
+        
+        Warm-Up (15-20 minutes):
+        • Easy jog: 800m
+        • Dynamic stretches: 10 minutes
+        • Sprint drills: 5 minutes
+        • Acceleration work: 5 minutes
+        
+        Technical Work (30-40 minutes):
+        • Sprint technique: 6x30m at 90% speed
+        • Horizontal bounds: 4 sets of 30m
+        • Power skips: 3 sets of 30m
+        • Speed bounds: 4 sets of 20m
+        
+        Strength/Power Development (20-25 minutes):
+        • Power cleans: 4 sets of 4 reps
+        • Jump squats: 3 sets of 6 reps
+        • Explosive step-ups: 3 sets each leg
+        
+        Cool-Down (10-15 minutes):
+        • Light jog: 400m
+        • Static stretches: 8-10 minutes
+        • Recovery walk: 5 minutes
+        
+        FRIDAY
+        Focus: Technical Refinement and Light Power
+        
+        Warm-Up (15-20 minutes):
+        • Easy jog: 800m
+        • Dynamic stretches: 10 minutes
+        • Technical drills: 5 minutes
+        • Phase-specific mobility: 5 minutes
+        
+        Technical Work (30-40 minutes):
+        • Short approach triple jumps: 6-8 attempts
+        • Phase isolation work: 3 sets each phase
+        • Technical corrections: 4-6 attempts
+        • Run-through practice: 4 attempts
+        
+        Strength/Power Development (15-20 minutes):
+        • Light plyometrics: 3 sets
+        • Balance work: 3 sets each leg
+        • Core stability: 2 rounds
+        
+        Cool-Down (10-15 minutes):
+        • Light jog: 400m
+        • Static stretches: 8-10 minutes
+        • Recovery walk: 5 minutes
+        
+        SATURDAY
+        Focus: Competition Practice or Light Technical Work
+        
+        Warm-Up (15-20 minutes):
+        • Easy jog: 800m
+        • Competition warm-up routine: 10 minutes
+        • Light drills: 5 minutes
+        • Mental preparation: 5 minutes
+        
+        Technical Work (20-30 minutes):
+        • Competition run-through: 3-4 attempts
+        • Light technical work: 2-3 sets
+        • Approach run practice: 4-5 runs
+        
+        Cool-Down (10-15 minutes):
+        • Light jog: 400m
+        • Static stretches: 8-10 minutes
+        • Recovery walk: 5 minutes
+        
+        SUNDAY
+        Focus: Recovery and Active Rest
+        
+        Recovery Session (45-60 minutes):
+        • Light walking or cycling: 20-30 minutes
+        • Mobility work: 15-20 minutes
+        • Stretching routine: 15-20 minutes
+        • Light core work (optional): 10 minutes
+        
+        Guidelines:
+        • Keep workouts appropriate for \(ageGroup) athletes
+        • Include specific numbers for sets, reps, and intensities
+        • Vary exercises throughout the week
+        • Ensure proper progression and recovery
+        • Include options for different fitness levels
+        • Focus on \(event)-specific technique and conditioning
+        • Adapt training volume based on age group
+        • Include proper warm-up and cool-down protocols
+        • Emphasize injury prevention exercises
+        """
+        
+        print("WeeksList: Generated prompt with length: \(prompt.count)")
+        print("WeeksList: Selected options - Age: \(ageGroup), Event: \(event), Term: \(term), Period: \(period)")
+        
+        do {
+            print("WeeksList: Calling ChatGPT service")
+            let response = try await chatGPTService.generateWorkoutPlan(prompt: prompt)
+            print("WeeksList: Received response from ChatGPT service")
+            
+            await MainActor.run {
+                print("WeeksList: Updating UI on main thread")
+                self.programContent = response
+                self.isLoading = false
+                self.retryCount = 0
+                self.hasAttemptedReconnection = false
+            }
+        } catch let error as ChatGPTError {
+            print("WeeksList: ChatGPT Error: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.error = error.localizedDescription
+                self.isLoading = false
                 
-                let prompt = """
-                Generate a training program for Week \(week) of \(totalWeeks):
-                Age Group: \(ageGroup.rawValue)
-                Event: \(event.rawValue)
-                Term: \(term.rawValue)
-                Period: \(period.rawValue)
-                
-                Follow this exact format with appropriate content for \(event.rawValue):
-                
-                1. WARM-UP (15-20 minutes)
-                - Light Jogging:
-                  * 400m at 60% effort
-                - Dynamic Stretches:
-                  * [3-4 specific stretches with sets/reps]
-                - Event-Specific Drills:
-                  * [3-4 drills with details]
-                
-                2. MAIN SESSION (45-60 minutes)
-                Primary Exercises:
-                - [Exercise name]:
-                  * Sets: [number]
-                  * Reps/Distance: [specify]
-                  * Rest: [seconds]
-                  * Intensity: [percentage]
-                
-                Technical Focus:
-                - [2-3 specific technique points]
-                
-                3. COOL-DOWN (10-15 minutes)
-                - Recovery Jog:
-                  * [distance and intensity]
-                - Static Stretches:
-                  * [4-5 stretches with duration]
-                
-                4. RECOVERY GUIDELINES
-                Nutrition:
-                - [specific post-workout nutrition]
-                - [hydration requirements]
-                
-                5. SAFETY NOTES
-                - [age-appropriate guidelines]
-                - [specific precautions]
-                """
-                
-                print("WeeksList: Sending request to ChatGPT service...")
-                let response = try await chatGPTService.generateWorkoutPlan(prompt: prompt)
-                print("WeeksList: Received response from ChatGPT service")
-                DispatchQueue.main.async {
-                    print("WeeksList: Updating UI with response")
-                    self.programContent = response
-                    self.isLoading = false
-                    self.retryCount = 0
-                    self.hasAttemptedReconnection = false
-                }
-            } catch let error as ChatGPTError {
-                print("WeeksList: ChatGPT Error: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    self.error = error.localizedDescription
-                    self.isLoading = false
-                    
-                    if case .networkError(_) = error, !hasAttemptedReconnection {
-                        print("WeeksList: Network error detected, will attempt reconnection")
-                        hasAttemptedReconnection = true
-                        // Try again after a delay
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            generateProgram(week: week)
+                if case .networkError(_) = error, !hasAttemptedReconnection {
+                    print("WeeksList: Network error detected, will attempt reconnection")
+                    hasAttemptedReconnection = true
+                    // Try again after a delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                        Task {
+                            await generateProgram(week: week)
                         }
                     }
                 }
-            } catch {
-                print("WeeksList: Unexpected error: \(error.localizedDescription)")
-                DispatchQueue.main.async {
-                    self.error = "An unexpected error occurred: \(error.localizedDescription)"
-                    self.isLoading = false
-                }
             }
+        } catch {
+            print("WeeksList: Unexpected error: \(error.localizedDescription)")
+            DispatchQueue.main.async {
+                self.error = "An unexpected error occurred: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+        }
+    }
+    
+    private func getPhaseText(progress: Double) -> String {
+        if progress < 0.33 {
+            return "Hop Phase"
+        } else if progress < 0.66 {
+            return "Step Phase"
+        } else {
+            return "Jump Phase"
         }
     }
 }
