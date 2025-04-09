@@ -1,19 +1,29 @@
 import Foundation
 
-enum Config {
+enum AppConfig {
     // MARK: - API Configuration
     enum API {
         static var chatGPTApiKey: String {
-            guard let key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] else {
-                fatalError("""
-                    OpenAI API Key not found!
-                    Please set your API key in Xcode:
-                    1. Edit Scheme > Run > Arguments > Environment Variables
-                    2. Add OPENAI_API_KEY with your API key
-                    Or set it in the environment before running the app
-                    """)
+            // First try to get from environment (development)
+            if let key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] {
+                print("DEBUG: Using API key from environment")
+                return key
             }
-            return key
+            
+            // Then try to get from local config file
+            if let key = LocalConfig.apiKey {
+                print("DEBUG: Using API key from local config")
+                return key
+            }
+            
+            // Fall back to hardcoded key (production)
+            // IMPORTANT: This is a fallback and should be replaced with your actual key
+            // before building for production
+            let productionKey = "YOUR_OPENAI_API_KEY_HERE"
+            
+            // For security, only print the length of the key
+            print("DEBUG: Using production API key with length:", productionKey.count)
+            return productionKey
         }
         
         static let baseURL = "https://api.openai.com/v1/chat/completions"

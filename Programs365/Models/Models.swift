@@ -1,31 +1,64 @@
 import Foundation
 import SwiftUI
 
-enum AgeGroup: String, CaseIterable, Identifiable {
+// MARK: - Age Groups
+public enum AgeGroup: String, CaseIterable, Identifiable {
     case u12 = "U12"
     case u14 = "U14"
     case u16 = "U16"
     case u18 = "U18"
     case u20 = "U20"
-    case senior = "Senior"
+    case senior = "SENIOR"
     
-    var id: String { self.rawValue }
+    public var id: String { rawValue }
     
-    var allowedEvents: [TrackEvent] {
+    public var allowedEvents: [TrackEvent] {
         switch self {
         case .u12:
-            return [.sprints75m, .sprints150m, .middleDistance800m, .middleDistance1200m]
+            return [
+                .sprints75m, .sprints150m,
+                .middleDistance800m,
+                .longJump, .highJump,
+                .shotPut
+            ]
         case .u14:
-            return [.sprints100m, .sprints200m, .sprints300m, .middleDistance800m, .middleDistance1500m, .hurdles75m, .longJump, .highJump]
+            return [
+                .sprints75m, .sprints150m, .sprints200m,
+                .middleDistance800m, .middleDistance1500m,
+                .hurdles100m,
+                .relay4x100m,
+                .longJump, .tripleJump, .highJump,
+                .shotPut, .discus, .javelin
+            ]
         case .u16:
-            return [.sprints100m, .sprints200m, .sprints300m, .middleDistance800m, .middleDistance1500m, .hurdles80m, .hurdles300m, .longJump, .tripleJump, .highJump, .poleVault]
-        case .u18, .u20, .senior:
+            return [
+                .sprints100m, .sprints200m, .sprints300m,
+                .middleDistance800m, .middleDistance1500m,
+                .longDistance3000m,
+                .hurdles100m, .hurdles110m, .hurdles400m,
+                .relay4x100m, .relay4x400m,
+                .longJump, .tripleJump, .highJump, .poleVault,
+                .shotPut, .discus, .javelin, .hammer
+            ]
+        case .u18:
+            return [
+                .sprints100m, .sprints200m, .sprints400m,
+                .middleDistance800m, .middleDistance1500m,
+                .longDistance3000m, .longDistance5000m,
+                .hurdles100m, .hurdles110m, .hurdles400m,
+                .relay4x100m, .relay4x400m,
+                .longJump, .tripleJump, .highJump, .poleVault,
+                .shotPut, .discus, .javelin, .hammer,
+                .heptathlon
+            ]
+        case .u20, .senior:
             return TrackEvent.allCases
         }
     }
 }
 
-enum TrackEvent: String, CaseIterable, Identifiable {
+// MARK: - Track Events
+public enum TrackEvent: String, CaseIterable, Identifiable {
     // Sprints
     case sprints75m = "75m"
     case sprints100m = "100m"
@@ -36,17 +69,20 @@ enum TrackEvent: String, CaseIterable, Identifiable {
     
     // Middle Distance
     case middleDistance800m = "800m"
-    case middleDistance1200m = "1200m"
     case middleDistance1500m = "1500m"
-    case middleDistance3000m = "3000m"
+    
+    // Long Distance
+    case longDistance3000m = "3000m"
+    case longDistance5000m = "5000m"
     
     // Hurdles
-    case hurdles75m = "75m Hurdles"
-    case hurdles80m = "80m Hurdles"
     case hurdles100m = "100m Hurdles"
     case hurdles110m = "110m Hurdles"
-    case hurdles300m = "300m Hurdles"
     case hurdles400m = "400m Hurdles"
+    
+    // Relays
+    case relay4x100m = "4x100m Relay"
+    case relay4x400m = "4x400m Relay"
     
     // Jumps
     case longJump = "Long Jump"
@@ -54,94 +90,148 @@ enum TrackEvent: String, CaseIterable, Identifiable {
     case highJump = "High Jump"
     case poleVault = "Pole Vault"
     
-    var id: String { self.rawValue }
+    // Throws
+    case shotPut = "Shot Put"
+    case discus = "Discus"
+    case javelin = "Javelin"
+    case hammer = "Hammer"
     
-    var category: String {
+    // Combined Events
+    case decathlon = "Decathlon"
+    case heptathlon = "Heptathlon"
+    
+    public var id: String { rawValue }
+    
+    public var category: String {
         switch self {
         case .sprints75m, .sprints100m, .sprints150m, .sprints200m, .sprints300m, .sprints400m:
             return "Sprints"
-        case .middleDistance800m, .middleDistance1200m, .middleDistance1500m, .middleDistance3000m:
+        case .middleDistance800m, .middleDistance1500m:
             return "Middle Distance"
-        case .hurdles75m, .hurdles80m, .hurdles100m, .hurdles110m, .hurdles300m, .hurdles400m:
+        case .longDistance3000m, .longDistance5000m:
+            return "Long Distance"
+        case .hurdles100m, .hurdles110m, .hurdles400m:
             return "Hurdles"
+        case .relay4x100m, .relay4x400m:
+            return "Relays"
         case .longJump, .tripleJump, .highJump, .poleVault:
             return "Jumps"
+        case .shotPut, .discus, .javelin, .hammer:
+            return "Throws"
+        case .decathlon, .heptathlon:
+            return "Combined"
+        }
+    }
+    
+    public var isMaleOnly: Bool {
+        switch self {
+        case .hurdles110m, .decathlon:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    public var isFemaleOnly: Bool {
+        switch self {
+        case .hurdles100m, .heptathlon:
+            return true
+        default:
+            return false
         }
     }
 }
 
-enum TrainingTerm: String, CaseIterable, Identifiable {
-    case shortTerm = "Short Term (8 weeks)"
-    case mediumTerm = "Medium Term (16 weeks)"
-    case longTerm = "Long Term (24 weeks)"
+// MARK: - Training Terms
+public enum TrainingTerm: String, CaseIterable, Identifiable {
+    case winter = "Winter"
+    case summer = "Summer"
+    case preCompetition = "Pre-Competition"
+    case competition = "Competition"
     
-    var id: String { self.rawValue }
+    public var id: String { rawValue }
     
-    var description: String {
+    public var description: String {
         switch self {
-        case .shortTerm:
-            return "Ideal for athletes preparing for a specific competition or peak performance window within 2 months. Perfect for targeting regional championships or specific meets."
-        case .mediumTerm:
-            return "Balanced program for athletes looking to peak during the main competition season. Suitable for national championships or series of important meets."
-        case .longTerm:
-            return "Comprehensive preparation for major championships or full season planning. Allows for proper periodization and multiple peak performances."
-        }
-    }
-    
-    var weeks: Int {
-        switch self {
-        case .shortTerm: return 8
-        case .mediumTerm: return 16
-        case .longTerm: return 24
+        case .winter:
+            return "Focus on building strength and endurance"
+        case .summer:
+            return "Develop speed and technique"
+        case .preCompetition:
+            return "Fine-tune race preparation"
+        case .competition:
+            return "Peak performance and racing"
         }
     }
 }
 
-enum TrainingPeriod: String, CaseIterable, Identifiable {
-    case generalPreparation = "General Preparation"
-    case specificPreparation = "Specific Preparation"
+// MARK: - Training Periods
+public enum TrainingPeriod: String, CaseIterable, Identifiable {
+    case general = "General"
+    case specific = "Specific"
     case preCompetition = "Pre-Competition"
     case competition = "Competition"
     case transition = "Transition"
     
-    var id: String { self.rawValue }
+    public var id: String { rawValue }
     
     var description: String {
         switch self {
-        case .generalPreparation:
-            return "Focus on building general fitness, strength, and foundational skills"
-        case .specificPreparation:
-            return "Develop event-specific techniques and energy systems"
+        case .general:
+            return "Building foundational fitness and strength"
+        case .specific:
+            return "Event-specific training and technique work"
         case .preCompetition:
-            return "Fine-tune competition skills and reduce training volume"
+            return "Fine-tuning and competition preparation"
         case .competition:
-            return "Peak performance phase with competition-specific preparation"
+            return "Peak performance and competition focus"
         case .transition:
-            return "Active recovery and maintenance of basic fitness"
+            return "Active recovery and maintenance"
+        }
+    }
+    
+    var numberOfWeeks: Int {
+        switch self {
+        case .general:
+            return 12
+        case .specific:
+            return 8
+        case .preCompetition:
+            return 6
+        case .competition:
+            return 4
+        case .transition:
+            return 4
         }
     }
     
     func weeksForTerm(_ term: TrainingTerm) -> Int {
         switch (self, term) {
-        case (.generalPreparation, .shortTerm): return 2
-        case (.specificPreparation, .shortTerm): return 2
-        case (.preCompetition, .shortTerm): return 2
-        case (.competition, .shortTerm): return 1
-        case (.transition, .shortTerm): return 1
-            
-        case (.generalPreparation, .mediumTerm): return 4
-        case (.specificPreparation, .mediumTerm): return 4
-        case (.preCompetition, .mediumTerm): return 4
-        case (.competition, .mediumTerm): return 2
-        case (.transition, .mediumTerm): return 2
-            
-        case (.generalPreparation, .longTerm): return 6
-        case (.specificPreparation, .longTerm): return 6
-        case (.preCompetition, .longTerm): return 6
-        case (.competition, .longTerm): return 4
-        case (.transition, .longTerm): return 2
+        case (.general, _):
+            return 12
+        case (.specific, _):
+            return 8
+        case (.preCompetition, _):
+            return 6
+        case (.competition, _):
+            return 4
+        case (.transition, _):
+            return 4
         }
     }
+}
+
+// MARK: - Program Filter
+public enum ProgramFilter: String, CaseIterable {
+    case all = "All"
+    case sprints = "Sprints"
+    case middleDistance = "Middle Distance"
+    case longDistance = "Long Distance"
+    case hurdles = "Hurdles"
+    case relays = "Relays"
+    case jumps = "Jumps"
+    case throwing = "Throws"
+    case combined = "Combined"
 }
 
 struct Program: Identifiable {
@@ -205,4 +295,6 @@ enum TrainingMetric: String, CaseIterable {
     case time = "Time"
     case intensity = "Intensity"
     case volume = "Volume"
+    case pace = "Pace"
+    case elevation = "Elevation"
 } 

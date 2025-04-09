@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct InjuryLogCard: View {
     let injury: Injury
@@ -357,7 +358,7 @@ struct InjuryView: View {
                 InjuryPreventionView(injury: selectedInjury)
             }
             .sheet(isPresented: $showingMore) {
-                MoreView()
+                InjuryMoreView()
             }
         }
     }
@@ -411,8 +412,9 @@ struct LogInjuryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -438,10 +440,15 @@ struct LogInjuryView: View {
 struct InjuryPreventionView: View {
     @Environment(\.dismiss) private var dismiss
     let injury: Injury?
-    @StateObject private var chatGPTService = ChatGPTService(apiKey: Config.API.chatGPTApiKey)
+    @StateObject private var chatGPTService = ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey)
+    @ObservedObject private var programManager = SavedProgramManager.shared
     @State private var preventionProgram: AttributedString = AttributedString("")
     @State private var isLoading = false
     @State private var error: String?
+    @State private var showingSaveDialog = false
+    @State private var programTitle = ""
+    @State private var programNotes = ""
+    @State private var showingSavedConfirmation = false
     
     var body: some View {
         NavigationView {
@@ -455,8 +462,28 @@ struct InjuryPreventionView: View {
                             .foregroundColor(.red)
                             .padding()
                     } else {
-                        Text(preventionProgram)
-                            .padding()
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(preventionProgram)
+                                .padding()
+                            
+                            // Save Program Button
+                            Button(action: {
+                                programTitle = "\(injury?.type ?? "General") Prevention Program"
+                                showingSaveDialog = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.down")
+                                    Text("Save Program")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 10)
+                        }
                     }
                 }
             }
@@ -464,14 +491,54 @@ struct InjuryPreventionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SavedProgramsView()) {
+                        Image(systemName: "folder")
+                            .foregroundColor(.white)
                     }
                 }
             }
             .task {
                 await generatePreventionProgram()
             }
+            .sheet(isPresented: $showingSaveDialog) {
+                InjurySaveProgramView(
+                    title: $programTitle,
+                    notes: $programNotes,
+                    onSave: saveProgram,
+                    onCancel: { showingSaveDialog = false }
+                )
+            }
+            .overlay(
+                Group {
+                    if showingSavedConfirmation {
+                        VStack {
+                            Text("Program Saved!")
+                                .font(.headline)
+                                .padding()
+                                .background(Color.green.opacity(0.9))
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                        }
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                withAnimation {
+                                    showingSavedConfirmation = false
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 20)
+                , alignment: .top
+            )
         }
     }
     
@@ -535,16 +602,46 @@ struct InjuryPreventionView: View {
         
         isLoading = false
     }
+    
+    private func saveProgram() {
+        let program = SavedProgram(
+            id: UUID(),
+            name: programTitle,
+            description: programNotes.isEmpty ? "Injury prevention program" : programNotes,
+            category: .prevention,
+            weeks: [String(preventionProgram.characters)],
+            dateCreated: Date()
+        )
+        
+        programManager.addProgram(program)
+        showingSaveDialog = false
+        
+        withAnimation {
+            showingSavedConfirmation = true
+        }
+        
+        // Hide confirmation after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showingSavedConfirmation = false
+            }
+        }
+    }
 }
 
 struct RehabProgramView: View {
     @Environment(\.dismiss) private var dismiss
     let injury: Injury
-    @StateObject private var chatGPTService = ChatGPTService(apiKey: Config.API.chatGPTApiKey)
+    @StateObject private var chatGPTService = ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey)
+    @ObservedObject private var programManager = SavedProgramManager.shared
     @State private var rehabProgram: AttributedString = AttributedString("")
     @State private var isLoading = false
     @State private var error: String?
     @State private var selectedWeek = 1
+    @State private var showingSaveDialog = false
+    @State private var programTitle = ""
+    @State private var programNotes = ""
+    @State private var showingSavedConfirmation = false
     
     var body: some View {
         NavigationView {
@@ -574,8 +671,7 @@ struct RehabProgramView: View {
                     }
                     
                     if isLoading {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        InjuryLoadingView()
                     } else if let error = error {
                         Text(error)
                             .foregroundColor(.red)
@@ -602,6 +698,24 @@ struct RehabProgramView: View {
                                 .padding(.horizontal)
                             }
                             .padding(.vertical)
+                            
+                            // Save Program Button
+                            Button(action: {
+                                programTitle = "\(injury.type) Rehab Program"
+                                showingSaveDialog = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "square.and.arrow.down")
+                                    Text("Save Program")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 10)
                         }
                     }
                 }
@@ -610,14 +724,54 @@ struct RehabProgramView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: SavedProgramsView()) {
+                        Image(systemName: "folder")
+                            .foregroundColor(.white)
                     }
                 }
             }
             .task {
                 await generateRehabProgram()
             }
+            .sheet(isPresented: $showingSaveDialog) {
+                InjurySaveProgramView(
+                    title: $programTitle,
+                    notes: $programNotes,
+                    onSave: saveProgram,
+                    onCancel: { showingSaveDialog = false }
+                )
+            }
+            .overlay(
+                Group {
+                    if showingSavedConfirmation {
+                        VStack {
+                            Text("Program Saved!")
+                                .font(.headline)
+                                .padding()
+                                .background(Color.green.opacity(0.9))
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                        }
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                withAnimation {
+                                    showingSavedConfirmation = false
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.top, 20)
+                , alignment: .top
+            )
         }
     }
     
@@ -692,9 +846,68 @@ struct RehabProgramView: View {
         
         isLoading = false
     }
+    
+    private func saveProgram() {
+        let program = SavedProgram(
+            id: UUID(),
+            name: programTitle,
+            description: programNotes.isEmpty ? "Rehabilitation program" : programNotes,
+            category: .rehabilitation,
+            weeks: [String(rehabProgram.characters)],
+            dateCreated: Date()
+        )
+        
+        programManager.addProgram(program)
+        showingSaveDialog = false
+        
+        withAnimation {
+            showingSavedConfirmation = true
+        }
+        
+        // Hide confirmation after delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                showingSavedConfirmation = false
+            }
+        }
+    }
 }
 
-struct MoreView: View {
+struct InjurySaveProgramView: View {
+    @Binding var title: String
+    @Binding var notes: String
+    let onSave: () -> Void
+    let onCancel: () -> Void
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Program Details")) {
+                    TextField("Title", text: $title)
+                    TextField("Notes (Optional)", text: $notes)
+                }
+            }
+            .navigationTitle("Save Program")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        onSave()
+                    }
+                    .disabled(title.isEmpty)
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct InjuryMoreView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
@@ -715,7 +928,7 @@ struct MoreView: View {
                     
                     // Progress Section
                     NavigationLink(destination: ProgressView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Progress",
                             subtitle: "Track and view your training progress",
                             icon: "waveform.path.ecg",
@@ -723,9 +936,19 @@ struct MoreView: View {
                         )
                     }
                     
+                    // Para Athletes Section
+                    NavigationLink(destination: ParaAthletesView(chatGPTService: ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey))) {
+                        InjuryMoreOptionCard(
+                            title: "Para Athletes",
+                            subtitle: "Elite training programs for Paralympic athletes",
+                            icon: "figure.roll",
+                            iconColor: .red
+                        )
+                    }
+                    
                     // Nutrition Plans Section
                     NavigationLink(destination: NutritionPlansView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Nutrition Plans",
                             subtitle: "Elite athlete nutrition and meal plans",
                             icon: "fork.knife",
@@ -733,19 +956,9 @@ struct MoreView: View {
                         )
                     }
                     
-                    // Injury Rehabilitation Section
-                    NavigationLink(destination: InjuryRehabilitationView()) {
-                        MoreOptionCard(
-                            title: "Injury Rehabilitation",
-                            subtitle: "Comprehensive recovery programs for injuries",
-                            icon: "heart.fill",
-                            iconColor: .pink
-                        )
-                    }
-                    
                     // Injury Analysis Section
                     NavigationLink(destination: InjuryAnalysisView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Injury Analysis",
                             subtitle: "AI-assisted injury assessment tool",
                             icon: "camera.fill",
@@ -755,7 +968,7 @@ struct MoreView: View {
                     
                     // Achievements Section
                     NavigationLink(destination: AchievementsView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Achievements",
                             subtitle: "View your medals and accomplishments",
                             icon: "medal.fill",
@@ -765,7 +978,7 @@ struct MoreView: View {
                     
                     // Settings Section
                     NavigationLink(destination: SettingsView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Settings",
                             subtitle: "App preferences and account settings",
                             icon: "gearshape.fill",
@@ -775,7 +988,7 @@ struct MoreView: View {
                     
                     // Training History Section
                     NavigationLink(destination: TrainingHistoryView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Training History",
                             subtitle: "View past workouts and sessions",
                             icon: "calendar",
@@ -785,7 +998,7 @@ struct MoreView: View {
                     
                     // Sync Data Section
                     NavigationLink(destination: SyncDataView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Sync Data",
                             subtitle: "Synchronize with other fitness apps",
                             icon: "arrow.triangle.2.circlepath",
@@ -795,11 +1008,21 @@ struct MoreView: View {
                     
                     // Help & Support Section
                     NavigationLink(destination: HelpSupportView()) {
-                        MoreOptionCard(
+                        InjuryMoreOptionCard(
                             title: "Help & Support",
                             subtitle: "Get assistance and view tutorials",
                             icon: "questionmark.circle.fill",
                             iconColor: .orange
+                        )
+                    }
+                    
+                    // Injury Rehabilitation Section
+                    NavigationLink(destination: InjuryRehabilitationView()) {
+                        InjuryMoreOptionCard(
+                            title: "Injury Rehabilitation",
+                            subtitle: "Comprehensive recovery programs for injuries",
+                            icon: "heart.fill",
+                            iconColor: .pink
                         )
                     }
                 }
@@ -808,8 +1031,9 @@ struct MoreView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
                     }
                 }
             }
@@ -818,7 +1042,7 @@ struct MoreView: View {
     }
 }
 
-struct MoreOptionCard: View {
+struct InjuryMoreOptionCard: View {
     let title: String
     let subtitle: String
     let icon: String
@@ -855,40 +1079,12 @@ struct MoreOptionCard: View {
 
 // Define enums at file level
 
-struct ChartView: View {
-    let metric: TrainingMetric
-    let timeFrame: TimeFrame
-    
-    var body: some View {
-        VStack {
-            // Placeholder for actual chart implementation
-            Rectangle()
-                .fill(LinearGradient(
-                    gradient: Gradient(colors: [.red.opacity(0.5), .red.opacity(0.1)]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                ))
-                .overlay(
-                    Path { path in
-                        path.move(to: CGPoint(x: 0, y: 100))
-                        path.addCurve(
-                            to: CGPoint(x: 300, y: 50),
-                            control1: CGPoint(x: 100, y: 150),
-                            control2: CGPoint(x: 200, y: 0)
-                        )
-                    }
-                    .stroke(Color.red, lineWidth: 2)
-                )
-        }
-        .background(Color(UIColor.systemGray6))
-        .cornerRadius(16)
-    }
-}
-
 // Progress View
 struct ProgressView: View {
+    @StateObject private var dataManager = TrainingDataManager()
     @State private var selectedTimeFrame: TimeFrame = .week
     @State private var selectedMetric: TrainingMetric = .distance
+    @State private var showingLogSession = false
     
     var body: some View {
         ScrollView {
@@ -917,7 +1113,7 @@ struct ProgressView: View {
                 }
                 
                 // Progress Chart
-                ChartView(metric: selectedMetric, timeFrame: selectedTimeFrame)
+                ChartView(metric: selectedMetric, timeFrame: selectedTimeFrame, dataManager: dataManager)
                     .frame(height: 250)
                     .padding()
                 
@@ -929,23 +1125,70 @@ struct ProgressView: View {
                         .foregroundColor(.white)
                     
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        SummaryCard(title: "Total Distance", value: "42.5 km", change: "+3.2 km")
-                        SummaryCard(title: "Total Time", value: "5h 30m", change: "+45m")
-                        SummaryCard(title: "Avg. Pace", value: "4:32/km", change: "-0:05")
-                        SummaryCard(title: "Elevation", value: "350m", change: "+50m")
+                        SummaryCard(
+                            title: "Total Distance",
+                            value: String(format: "%.1f km", dataManager.totalDistance(for: selectedTimeFrame)),
+                            change: "+3.2 km"
+                        )
+                        SummaryCard(
+                            title: "Total Time",
+                            value: formatDuration(dataManager.totalTime(for: selectedTimeFrame)),
+                            change: "+45m"
+                        )
+                        SummaryCard(
+                            title: "Avg. Pace",
+                            value: dataManager.averagePace(for: selectedTimeFrame).map { formatPace($0) } ?? "N/A",
+                            change: "-0:05"
+                        )
+                        SummaryCard(
+                            title: "Elevation",
+                            value: String(format: "%.0f m", dataManager.totalElevation(for: selectedTimeFrame)),
+                            change: "+50m"
+                        )
                     }
                 }
                 .padding()
                 
                 // Recent Activities
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Recent Activities")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
+                    HStack {
+                        Text("Recent Activities")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                        
+                        Spacer()
+                        
+                        Button(action: { showingLogSession = true }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(.red)
+                        }
+                    }
                     
-                    ForEach(1...3, id: \.self) { _ in
-                        ActivityCard()
+                    if dataManager.sessions.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "figure.run")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray)
+                            
+                            Text("No training sessions yet")
+                                .font(.headline)
+                                .foregroundColor(.gray)
+                            
+                            Text("Tap the + button to log your first session")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(UIColor.systemGray6))
+                        .cornerRadius(12)
+                    } else {
+                        ForEach(dataManager.sessions.prefix(5)) { session in
+                            ActivityCard(session: session)
+                        }
                     }
                 }
                 .padding()
@@ -953,6 +1196,26 @@ struct ProgressView: View {
         }
         .navigationTitle("Progress")
         .background(Color.black.ignoresSafeArea())
+        .sheet(isPresented: $showingLogSession) {
+            LogTrainingSessionView(dataManager: dataManager)
+        }
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = Int(duration) / 60 % 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
+    }
+    
+    private func formatPace(_ pace: Double) -> String {
+        let minutes = Int(pace)
+        let seconds = Int((pace - Double(minutes)) * 60)
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 
@@ -1003,35 +1266,85 @@ struct SummaryCard: View {
 }
 
 struct ActivityCard: View {
+    let session: TrainingSession
+    
     var body: some View {
         HStack(spacing: 16) {
             Circle()
                 .fill(Color.red)
                 .frame(width: 40, height: 40)
                 .overlay(
-                    Image(systemName: "figure.run")
+                    Image(systemName: activityIcon)
                         .foregroundColor(.white)
                 )
             
             VStack(alignment: .leading, spacing: 4) {
-                Text("Track Session")
+                Text(session.type.rawValue)
                     .font(.headline)
                     .foregroundColor(.white)
                 
-                Text("10km • 45:30 • 4:33/km")
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                HStack {
+                    if let distance = session.distanceFormatted {
+                        Text(distance)
+                    }
+                    
+                    Text("•")
+                        .foregroundColor(.gray)
+                    
+                    Text(session.durationFormatted)
+                    
+                    if let pace = session.paceFormatted {
+                        Text("•")
+                            .foregroundColor(.gray)
+                        Text("\(pace)/km")
+                    }
+                }
+                .font(.subheadline)
+                .foregroundColor(.gray)
             }
             
             Spacer()
             
-            Text("1h ago")
+            Text(timeAgo(date: session.date))
                 .font(.caption)
                 .foregroundColor(.gray)
         }
         .padding()
         .background(Color(UIColor.systemGray6))
         .cornerRadius(12)
+    }
+    
+    private var activityIcon: String {
+        switch session.type {
+        case .running:
+            return "figure.run"
+        case .cycling:
+            return "figure.cycling"
+        case .swimming:
+            return "figure.pool.swim"
+        case .strength:
+            return "dumbbell.fill"
+        case .flexibility:
+            return "figure.flexibility"
+        case .recovery:
+            return "bed.double.fill"
+        }
+    }
+    
+    private func timeAgo(date: Date) -> String {
+        let calendar = Calendar.current
+        let now = Date()
+        let components = calendar.dateComponents([.minute, .hour, .day], from: date, to: now)
+        
+        if let day = components.day, day > 0 {
+            return "\(day)d ago"
+        } else if let hour = components.hour, hour > 0 {
+            return "\(hour)h ago"
+        } else if let minute = components.minute, minute > 0 {
+            return "\(minute)m ago"
+        } else {
+            return "Just now"
+        }
     }
 }
 
@@ -1391,27 +1704,9 @@ struct NutrientTag: View {
     }
 }
 
-// Injury Rehabilitation View
-struct InjuryRehabilitationView: View {
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Text("Rehabilitation Programs")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                
-                // Rehabilitation program content will go here
-            }
-        }
-        .navigationTitle("Rehabilitation")
-        .background(Color.black.ignoresSafeArea())
-    }
-}
-
 // Injury Analysis View
 struct InjuryAnalysisView: View {
+    @StateObject private var chatGPTService = ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey)
     @State private var selectedBodyPart: BodyPart = .knee
     @State private var painLevel: Double = 5
     @State private var symptoms: String = ""
@@ -1419,6 +1714,9 @@ struct InjuryAnalysisView: View {
     @State private var selectedImage: UIImage?
     @State private var analysisResult: AnalysisResult?
     @State private var isAnalyzing = false
+    @State private var showingDisclaimer = true
+    @State private var errorMessage: String?
+    @State private var selectedSourceType: UIImagePickerController.SourceType = .camera
     
     enum BodyPart: String, CaseIterable {
         case knee = "Knee"
@@ -1441,6 +1739,11 @@ struct InjuryAnalysisView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                // Disclaimer Alert
+                if showingDisclaimer {
+                    DisclaimerView(isPresented: $showingDisclaimer)
+                }
+                
                 // Body Part Selection
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Select Area of Concern")
@@ -1517,16 +1820,51 @@ struct InjuryAnalysisView: View {
                             .cornerRadius(12)
                     }
                     
-                    Button(action: { showingCamera = true }) {
-                        HStack {
-                            Image(systemName: "camera.fill")
-                            Text(selectedImage == nil ? "Take Photo" : "Retake Photo")
+                    HStack(spacing: 12) {
+                        Button(action: { 
+                            showingCamera = true
+                            selectedSourceType = .camera
+                        }) {
+                            HStack {
+                                Image(systemName: "camera.fill")
+                                Text("Take Photo")
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red)
+                            .cornerRadius(12)
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(12)
+                        
+                        Button(action: { 
+                            showingCamera = true
+                            selectedSourceType = .photoLibrary
+                        }) {
+                            HStack {
+                                Image(systemName: "photo.fill")
+                                Text("Upload Photo")
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.red)
+                            .cornerRadius(12)
+                        }
+                    }
+                    
+                    if selectedImage != nil {
+                        Button(action: { selectedImage = nil }) {
+                            HStack {
+                                Image(systemName: "trash.fill")
+                                Text("Remove Photo")
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.gray)
+                            .cornerRadius(12)
+                        }
+                        .padding(.top, 8)
                     }
                 }
                 .padding()
@@ -1553,11 +1891,21 @@ struct InjuryAnalysisView: View {
                     .padding(.horizontal)
                 }
                 
+                // Error Message
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(.red)
+                        .font(.subheadline)
+                        .padding()
+                        .background(Color(UIColor.systemGray6))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                }
+                
                 // Analyze Button
                 Button(action: analyzeInjury) {
                     if isAnalyzing {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        InjuryLoadingView()
                     } else {
                         Text("Analyze Injury")
                             .fontWeight(.semibold)
@@ -1566,7 +1914,7 @@ struct InjuryAnalysisView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.red)
+                .background(symptoms.isEmpty ? Color.gray : Color.red)
                 .cornerRadius(12)
                 .padding(.horizontal)
                 .disabled(symptoms.isEmpty)
@@ -1575,23 +1923,186 @@ struct InjuryAnalysisView: View {
         .navigationTitle("Injury Analysis")
         .background(Color.black.ignoresSafeArea())
         .sheet(isPresented: $showingCamera) {
-            ImagePicker(image: $selectedImage)
+            InjuryImagePicker(image: $selectedImage, sourceType: selectedSourceType)
         }
     }
     
     private func analyzeInjury() {
         isAnalyzing = true
+        errorMessage = nil
         
-        // Simulate AI analysis
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            analysisResult = AnalysisResult(
-                severity: "Moderate",
-                recommendation: "Consult with sports physician",
-                treatment: "Rest, Ice, Compression, Elevation (RICE) protocol recommended",
-                recoveryTime: "2-3 weeks with proper treatment"
-            )
-            isAnalyzing = false
+        let prompt = """
+        As a sports medicine professional, analyze the following athletic injury:
+        
+        Athlete Information:
+        - Body Part: \(selectedBodyPart.rawValue)
+        - Pain Level: \(Int(painLevel))/10
+        - Symptoms: \(symptoms)
+        \(selectedImage != nil ? "- Visual analysis available" : "")
+        
+        Please provide a detailed analysis in this exact format:
+        
+        Severity: [Mild/Moderate/Severe]
+        Recommendation: [Immediate action steps, including whether professional medical attention is needed]
+        Treatment: [Detailed treatment plan with specific steps]
+        Recovery: [Estimated timeline with clear milestones]
+        
+        Important notes:
+        1. Be conservative in assessment
+        2. Emphasize when professional medical attention is needed
+        3. Focus on athletic context
+        4. Include warning signs to watch for
+        5. Provide clear recovery milestones
+        """
+        
+        Task {
+            do {
+                let response = try await chatGPTService.generateWorkoutPlan(prompt: prompt)
+                let analysis = parseGPTResponse(response.description)
+                
+                await MainActor.run {
+                    self.analysisResult = analysis
+                    self.isAnalyzing = false
+                }
+            } catch {
+                print("Error analyzing injury: \(error)")
+                await MainActor.run {
+                    self.errorMessage = "Unable to complete analysis. Please try again or consult a medical professional."
+                    self.isAnalyzing = false
+                }
+            }
         }
+    }
+    
+    private func parseGPTResponse(_ response: String) -> AnalysisResult {
+        var severity = "Unable to determine"
+        var recommendation = "Please consult a medical professional"
+        var treatment = "Seek professional medical advice"
+        var recoveryTime = "Varies based on severity"
+        
+        let lines = response.components(separatedBy: .newlines)
+        var currentSection = ""
+        var currentContent: [String] = []
+        
+        for line in lines {
+            let lowercaseLine = line.lowercased().trimmingCharacters(in: .whitespaces)
+            
+            if lowercaseLine.starts(with: "severity:") {
+                if !currentContent.isEmpty {
+                    switch currentSection {
+                    case "severity": severity = currentContent.joined(separator: " ")
+                    case "recommendation": recommendation = currentContent.joined(separator: " ")
+                    case "treatment": treatment = currentContent.joined(separator: " ")
+                    case "recovery": recoveryTime = currentContent.joined(separator: " ")
+                    default: break
+                    }
+                    currentContent.removeAll()
+                }
+                currentSection = "severity"
+                if let content = line.components(separatedBy: ":").last?.trimmingCharacters(in: .whitespaces) {
+                    currentContent.append(content)
+                }
+            } else if lowercaseLine.starts(with: "recommendation:") {
+                if !currentContent.isEmpty {
+                    switch currentSection {
+                    case "severity": severity = currentContent.joined(separator: " ")
+                    case "recommendation": recommendation = currentContent.joined(separator: " ")
+                    case "treatment": treatment = currentContent.joined(separator: " ")
+                    case "recovery": recoveryTime = currentContent.joined(separator: " ")
+                    default: break
+                    }
+                    currentContent.removeAll()
+                }
+                currentSection = "recommendation"
+                if let content = line.components(separatedBy: ":").last?.trimmingCharacters(in: .whitespaces) {
+                    currentContent.append(content)
+                }
+            } else if lowercaseLine.starts(with: "treatment:") {
+                if !currentContent.isEmpty {
+                    switch currentSection {
+                    case "severity": severity = currentContent.joined(separator: " ")
+                    case "recommendation": recommendation = currentContent.joined(separator: " ")
+                    case "treatment": treatment = currentContent.joined(separator: " ")
+                    case "recovery": recoveryTime = currentContent.joined(separator: " ")
+                    default: break
+                    }
+                    currentContent.removeAll()
+                }
+                currentSection = "treatment"
+                if let content = line.components(separatedBy: ":").last?.trimmingCharacters(in: .whitespaces) {
+                    currentContent.append(content)
+                }
+            } else if lowercaseLine.starts(with: "recovery:") {
+                if !currentContent.isEmpty {
+                    switch currentSection {
+                    case "severity": severity = currentContent.joined(separator: " ")
+                    case "recommendation": recommendation = currentContent.joined(separator: " ")
+                    case "treatment": treatment = currentContent.joined(separator: " ")
+                    case "recovery": recoveryTime = currentContent.joined(separator: " ")
+                    default: break
+                    }
+                    currentContent.removeAll()
+                }
+                currentSection = "recovery"
+                if let content = line.components(separatedBy: ":").last?.trimmingCharacters(in: .whitespaces) {
+                    currentContent.append(content)
+                }
+            } else if !line.isEmpty {
+                currentContent.append(line.trimmingCharacters(in: .whitespaces))
+            }
+        }
+        
+        // Process any remaining content
+        if !currentContent.isEmpty {
+            switch currentSection {
+            case "severity": severity = currentContent.joined(separator: " ")
+            case "recommendation": recommendation = currentContent.joined(separator: " ")
+            case "treatment": treatment = currentContent.joined(separator: " ")
+            case "recovery": recoveryTime = currentContent.joined(separator: " ")
+            default: break
+            }
+        }
+        
+        return AnalysisResult(
+            severity: severity,
+            recommendation: recommendation,
+            treatment: treatment,
+            recoveryTime: recoveryTime
+        )
+    }
+}
+
+struct DisclaimerView: View {
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.yellow)
+                Text("Medical Disclaimer")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Spacer()
+                Button(action: { isPresented = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.gray)
+                }
+            }
+            
+            Text("This injury analysis tool uses AI to provide general guidance and should NOT be considered as professional medical advice. The information provided is for reference only.")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
+            Text("Always consult with a qualified healthcare provider or sports medicine professional for proper diagnosis and treatment of injuries.")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .padding(.top, 4)
+        }
+        .padding()
+        .background(Color(UIColor.systemGray6))
+        .cornerRadius(16)
+        .padding(.horizontal)
     }
 }
 
@@ -1635,14 +2146,15 @@ struct ResultCard: View {
     }
 }
 
-struct ImagePicker: UIViewControllerRepresentable {
+struct InjuryImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Environment(\.presentationMode) private var presentationMode
+    let sourceType: UIImagePickerController.SourceType
     
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
-        picker.sourceType = .camera
+        picker.sourceType = sourceType
         return picker
     }
     
@@ -1653,9 +2165,9 @@ struct ImagePicker: UIViewControllerRepresentable {
     }
     
     class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: ImagePicker
+        let parent: InjuryImagePicker
         
-        init(_ parent: ImagePicker) {
+        init(_ parent: InjuryImagePicker) {
             self.parent = parent
         }
         
@@ -1755,6 +2267,30 @@ struct HelpSupportView: View {
         }
         .navigationTitle("Help & Support")
         .background(Color.black.ignoresSafeArea())
+    }
+}
+
+struct InjuryLoadingView: View {
+    var body: some View {
+        VStack(spacing: 20) {
+            Circle()
+                .trim(from: 0, to: 0.8)
+                .stroke(Color.red, lineWidth: 4)
+                .frame(width: 50, height: 50)
+                .rotationEffect(.degrees(360))
+                .onAppear {
+                    withAnimation(.linear(duration: 0.7).repeatForever(autoreverses: false)) {
+                        // The animation will be applied automatically
+                    }
+                }
+            
+            Text("Analyzing injury...")
+                .font(.headline)
+                .foregroundColor(.white)
+        }
+        .padding()
+        .background(Color(UIColor.systemGray6))
+        .cornerRadius(12)
     }
 }
 

@@ -1,0 +1,129 @@
+// Tab Bar
+"Home" = "首页";
+"Programs" = "训练计划";
+"Competitions" = "比赛";
+"Injury" = "伤病";
+"More" = "更多";
+
+// Landing View
+"Welcome to Programs365" = "欢迎使用 Programs365";
+"Your personalized training companion" = "您的个性化训练伙伴";
+"Get Started" = "开始使用";
+"Start Training" = "开始训练";
+"Triple Jump" = "三级跳远";
+"Long Jump" = "跳远";
+"High Jump" = "跳高";
+"Pole Vault" = "撑杆跳高";
+"Javelin" = "标枪";
+"Discus" = "铁饼";
+"Shot Put" = "铅球";
+"Hammer Throw" = "链球";
+"Custom" = "自定义";
+
+// Programs View
+"Select Event" = "选择项目";
+"Select Week" = "选择周";
+"Generate Program" = "生成训练计划";
+"Loading..." = "加载中...";
+"Generating your personalized training program..." = "正在生成您的个性化训练计划...";
+"Save Program" = "保存训练计划";
+"Program Title" = "训练计划标题";
+"Program Notes" = "训练计划备注";
+"Save" = "保存";
+"Cancel" = "取消";
+"Program Saved!" = "训练计划已保存！";
+"Saved Programs" = "已保存的训练计划";
+"No saved programs yet" = "暂无已保存的训练计划";
+"Delete" = "删除";
+"Edit" = "编辑";
+"View" = "查看";
+
+// More View
+"Profile" = "个人资料";
+"View and edit your profile" = "查看和编辑您的个人资料";
+"Saved Programs" = "已保存的训练计划";
+"Access your saved training programs" = "访问您已保存的训练计划";
+"Injury Analysis" = "伤病分析";
+"Analyze and track injuries" = "分析和跟踪伤病";
+"Progress" = "进度";
+"Track your training progress" = "跟踪您的训练进度";
+"Nutrition Plans" = "营养计划";
+"Get personalized nutrition advice" = "获取个性化营养建议";
+"Training History" = "训练历史";
+"View your past training sessions" = "查看您过去的训练课程";
+"Settings" = "设置";
+"Customize app settings" = "自定义应用设置";
+"Help & Support" = "帮助与支持";
+"Get help and support" = "获取帮助和支持";
+"Achievements" = "成就";
+"Track your achievements" = "跟踪您的成就";
+
+// Settings
+"Account" = "账户";
+"Change Password" = "更改密码";
+"Privacy Settings" = "隐私设置";
+"Terms of Service" = "服务条款";
+"Privacy Policy" = "隐私政策";
+"Notifications" = "通知";
+"Push Notifications" = "推送通知";
+"Email Notifications" = "电子邮件通知";
+"Appearance" = "外观";
+"Dark Mode" = "深色模式";
+"Language" = "语言";
+"About" = "关于";
+"Version" = "版本";
+"Rate App" = "评价应用";
+"Share App" = "分享应用";
+"Contact Us" = "联系我们";
+"Log Out" = "退出登录";
+
+// Profile
+"Edit Profile" = "编辑个人资料";
+"Name" = "姓名";
+"Email" = "电子邮件";
+"Phone" = "电话";
+"Bio" = "个人简介";
+"Profile Picture" = "个人头像";
+"Take Photo" = "拍照";
+"Choose from Library" = "从相册选择";
+"Save Changes" = "保存更改";
+
+// Injury Analysis
+"Add Injury" = "添加伤病";
+"Injury Type" = "伤病类型";
+"Injury Location" = "伤病位置";
+"Injury Severity" = "伤病严重程度";
+"Injury Date" = "伤病日期";
+"Injury Notes" = "伤病备注";
+"Add" = "添加";
+"Edit Injury" = "编辑伤病";
+"Update" = "更新";
+"Injury History" = "伤病历史";
+"No injuries recorded" = "暂无记录的伤病";
+
+// Progress
+"Track Progress" = "跟踪进度";
+"Progress Charts" = "进度图表";
+"No progress data available" = "暂无进度数据";
+
+// Nutrition Plans
+"Nutrition Advice" = "营养建议";
+"Meal Plans" = "膳食计划";
+"No nutrition plans available" = "暂无营养计划";
+
+// Training History
+"Past Sessions" = "过去的训练课程";
+"No training history available" = "暂无训练历史";
+
+// Help & Support
+"FAQ" = "常见问题";
+"Contact Support" = "联系支持";
+"Send Message" = "发送消息";
+"Subject" = "主题";
+"Message" = "消息";
+"Send" = "发送";
+"Message Sent" = "消息已发送";
+
+// Achievements
+"Your Achievements" = "您的成就";
+"No achievements yet" = "暂无成就"; 

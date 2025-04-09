@@ -216,8 +216,10 @@ enum AchievementType {
     }
 }
 
-#Preview {
-    NavigationView {
-        AchievementsView()
+struct AchievementsView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            AchievementsView()
+        }
     }
 } 

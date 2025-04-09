@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+               BlueprintIdentifier = "E78ED5E52D9D5D1300800AE9"
                BuildableName = "Programs365.app"
                BlueprintName = "Programs365"
                ReferencedContainer = "container:Programs365.xcodeproj">
@@ -28,7 +28,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "13B07F8E1A680F5B00A75B9A"
+               BlueprintIdentifier = "E78ED5F22D9D5D1400800AE9"
                BuildableName = "Programs365Tests.xctest"
                BlueprintName = "Programs365Tests"
                ReferencedContainer = "container:Programs365.xcodeproj">
@@ -42,7 +42,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "13B07F981A680F5B00A75B9A"
+               BlueprintIdentifier = "E78ED5FC2D9D5D1400800AE9"
                BuildableName = "Programs365UITests.xctest"
                BlueprintName = "Programs365UITests"
                ReferencedContainer = "container:Programs365.xcodeproj">
@@ -61,7 +61,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "13B07F8E1A680F5B00A75B9A"
+               BlueprintIdentifier = "E78ED5F22D9D5D1400800AE9"
                BuildableName = "Programs365Tests.xctest"
                BlueprintName = "Programs365Tests"
                ReferencedContainer = "container:Programs365.xcodeproj">
@@ -71,7 +71,7 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "13B07F981A680F5B00A75B9A"
+               BlueprintIdentifier = "E78ED5FC2D9D5D1400800AE9"
                BuildableName = "Programs365UITests.xctest"
                BlueprintName = "Programs365UITests"
                ReferencedContainer = "container:Programs365.xcodeproj">
@@ -93,12 +93,19 @@
          runnableDebuggingMode = "1">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+            BlueprintIdentifier = "E78ED5E52D9D5D1300800AE9"
             BuildableName = "Programs365.app"
             BlueprintName = "Programs365"
             ReferencedContainer = "container:Programs365.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "OPENAI_API_KEY"
+            value = "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"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -110,7 +117,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+            BlueprintIdentifier = "E78ED5E52D9D5D1300800AE9"
             BuildableName = "Programs365.app"
             BlueprintName = "Programs365"
             ReferencedContainer = "container:Programs365.xcodeproj">

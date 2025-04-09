@@ -1,6 +1,10 @@
 import Foundation
 import Network
 import RegexBuilder
+import SwiftUI
+
+@_exported import struct Foundation.UUID
+@_exported import struct Foundation.Date
 
 @globalActor actor ChatGPTActor {
     static let shared = ChatGPTActor()
@@ -58,6 +62,7 @@ final class ChatGPTService: ObservableObject {
     private var isMonitoring = false
     
     init(apiKey: String) {
+        print("DEBUG: ChatGPTService initialized with API key length:", apiKey.count)
         self.apiKey = apiKey
         setupNetworkMonitoring()
     }
@@ -175,17 +180,17 @@ final class ChatGPTService: ObservableObject {
                 
                 // Day header
                 var header = AttributedString(lines[0])
-                header.foregroundColor = .red
-                header.font = .system(.title, design: .default, weight: .bold)
+                header.foregroundColor = Color.red
+                header.font = Font.system(.title, design: .default).weight(.bold)
                 result += header + "\n\n"
                 
                 // Focus line
                 if let focusLine = lines.first(where: { $0.hasPrefix("Focus:") }) {
                     print("ChatGPTService: Found Focus line: \(focusLine)")
                     var focus = AttributedString(focusLine)
-                    focus.foregroundColor = .white
-                    focus.font = .system(.headline, design: .default, weight: .medium)
-                    result += focus + "\n\n"
+                    focus.foregroundColor = Color.white
+                    focus.font = Font.system(.headline, design: .default).weight(.medium)
+                    result += focus + "\n" // Single newline for reduced spacing
                 }
                 
                 // Main content
@@ -263,6 +268,8 @@ final class ChatGPTService: ObservableObject {
     }
     
     func generateWorkoutPlan(prompt: String, retryCount: Int = 0) async throws -> AttributedString {
+        print("DEBUG: Starting to generate workout plan")
+        print("DEBUG: Network status - WiFi: \(hasWiFi), Cellular: \(hasCellular), Offline: \(isOffline)")
         print("ChatGPTService: Starting workout plan generation")
         print("ChatGPTService: Using API key of length: \(apiKey.count)")
         print("ChatGPTService: Prompt length: \(prompt.count)")
@@ -319,28 +326,12 @@ final class ChatGPTService: ObservableObject {
         print("ChatGPTService: Headers prepared with API key length: \(apiKey.count)")
         
         let event = extractEvent(from: prompt)
+        let systemPrompt = getEventSpecificSystemPrompt(for: event)
+        
         let body: [String: Any] = [
             "model": "gpt-3.5-turbo",
             "messages": [
-                ["role": "system", "content": """
-                You are a professional track and field coach specializing in \(event) training.
-                Format your response exactly as shown in the template.
-                Use proper bullet points (•) and consistent indentation.
-                Include specific numbers for all sets, reps, and intensities.
-                Separate days with clear headers using an en dash (–).
-                Keep workouts appropriate for the specified age group and event.
-                
-                For Triple Jump specifically:
-                - Focus on the three phases: hop, step, and jump
-                - Include phase-specific drills and exercises
-                - Emphasize proper landing mechanics
-                - Include approach run practice
-                - Add plyometric exercises for power development
-                - Include core stability work
-                - Adapt training volume based on age group
-                - Include injury prevention exercises
-                - Focus on technical mastery
-                """],
+                ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": prompt]
             ],
             "temperature": 0.7,
@@ -504,7 +495,27 @@ final class ChatGPTService: ObservableObject {
     }
     
     private func extractEvent(from prompt: String) -> String {
-        // Simple extraction of event from prompt
+        // Extract specific event from prompt
+        let events = [
+            // Sprints
+            "75m", "100m", "150m", "200m", "300m", "400m",
+            // Middle Distance
+            "800m", "1200m", "1500m", "3000m",
+            // Hurdles
+            "75m Hurdles", "80m Hurdles", "100m Hurdles", "110m Hurdles", "300m Hurdles", "400m Hurdles",
+            // Jumps
+            "Long Jump", "Triple Jump", "High Jump", "Pole Vault",
+            // Throws
+            "Shot Put", "Discus", "Javelin", "Hammer"
+        ]
+        
+        for event in events {
+            if prompt.contains(event) {
+                return event
+            }
+        }
+        
+        // Fallback to broader categories if specific event not found
         if prompt.contains("Sprints") { return "Sprints" }
         if prompt.contains("Middle Distance") { return "Middle Distance" }
         if prompt.contains("Long Distance") { return "Long Distance" }
@@ -534,6 +545,245 @@ final class ChatGPTService: ObservableObject {
         
         Consult with a healthcare professional for personalized advice.
         """
+    }
+    
+    private func getEventSpecificSystemPrompt(for event: String) -> String {
+        // Base prompt that applies to all events
+        var prompt = """
+        You are a professional track and field coach specializing in \(event) training.
+        Format your response exactly as shown in the template.
+        Use proper bullet points (•) and consistent indentation.
+        Include specific numbers for all sets, reps, and intensities.
+        Separate days with clear headers using an en dash (–).
+        Keep workouts appropriate for the specified age group and event.
+        """
+        
+        // Add event-specific instructions
+        switch event {
+        case "100m", "200m", "300m", "400m", "75m", "150m":
+            prompt += """
+            
+            For \(event) specifically:
+            - Focus on explosive starts and acceleration
+            - Include sprint mechanics drills
+            - Emphasize proper arm action and leg drive
+            - Include block starts and reaction time drills
+            - Add plyometric exercises for power development
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            - For \(event), emphasize \(event == "100m" ? "maximal velocity" : event == "200m" ? "curve running" : event == "400m" ? "lactate tolerance" : "acceleration")
+            """
+            
+        case "800m", "1200m", "1500m", "3000m":
+            prompt += """
+            
+            For \(event) specifically:
+            - Focus on aerobic and anaerobic conditioning
+            - Include pace judgment and race strategy
+            - Emphasize proper running form at different speeds
+            - Include interval training with appropriate work/rest ratios
+            - Add strength endurance exercises
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            - For \(event), emphasize \(event == "800m" ? "lactate tolerance" : event == "1500m" ? "aerobic power" : "aerobic endurance")
+            """
+            
+        case "75m Hurdles", "80m Hurdles", "100m Hurdles", "110m Hurdles", "300m Hurdles", "400m Hurdles":
+            prompt += """
+            
+            For \(event) specifically:
+            - Focus on hurdle technique and rhythm
+            - Include lead leg and trail leg drills
+            - Emphasize proper hurdle clearance
+            - Include approach run practice
+            - Add plyometric exercises for power development
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            - For \(event), emphasize \(event.contains("300m") || event.contains("400m") ? "endurance" : "speed")
+            """
+            
+        case "Long Jump":
+            prompt += """
+            
+            For Long Jump specifically:
+            - Focus on approach run and takeoff technique
+            - Include takeoff drills and exercises
+            - Emphasize proper landing mechanics
+            - Include approach run practice
+            - Add plyometric exercises for power development
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            """
+            
+        case "Triple Jump":
+            prompt += """
+            
+            For Triple Jump specifically:
+            - Focus on the three phases: hop, step, and jump
+            - Include phase-specific drills and exercises
+            - Emphasize proper landing mechanics
+            - Include approach run practice
+            - Add plyometric exercises for power development
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            """
+            
+        case "High Jump":
+            prompt += """
+            
+            For High Jump specifically:
+            - Focus on approach run and takeoff technique
+            - Include bar clearance drills
+            - Emphasize proper landing mechanics
+            - Include approach run practice
+            - Add plyometric exercises for power development
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            """
+            
+        case "Pole Vault":
+            prompt += """
+            
+            For Pole Vault specifically:
+            - Focus on approach run and plant technique
+            - Include pole carry and plant drills
+            - Emphasize proper swing-up and bar clearance
+            - Include approach run practice
+            - Add upper body and core strength exercises
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            """
+            
+        case "Shot Put", "Discus", "Javelin", "Hammer":
+            prompt += """
+            
+            For \(event) specifically:
+            - Focus on throwing technique and mechanics
+            - Include specific throwing drills
+            - Emphasize proper release and follow-through
+            - Include approach/glide/spin practice
+            - Add strength exercises for throwing power
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            """
+            
+        default:
+            prompt += """
+            
+            For \(event) training:
+            - Focus on event-specific technique and conditioning
+            - Include appropriate drills and exercises
+            - Emphasize proper form and mechanics
+            - Include strength and power development
+            - Add event-specific conditioning
+            - Include core stability work
+            - Adapt training volume based on age group
+            - Include injury prevention exercises
+            - Focus on technical mastery
+            """
+        }
+        
+        return prompt
+    }
+    
+    @MainActor
+    func generateProgram(prompt: String) async throws -> String {
+        if !checkNetworkConnection() {
+            throw ChatGPTError.noInternetConnection
+        }
+        
+        guard let url = URL(string: baseURL) else {
+            throw ChatGPTError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let requestBody = [
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                ["role": "system", "content": "You are a professional athletics coach specializing in training program development."],
+                ["role": "user", "content": prompt]
+            ],
+            "temperature": 0.7
+        ] as [String : Any]
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        } catch {
+            throw ChatGPTError.serializationError(error)
+        }
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw ChatGPTError.invalidResponse
+            }
+            
+            switch httpResponse.statusCode {
+            case 200:
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let choices = json["choices"] as? [[String: Any]],
+                   let firstChoice = choices.first,
+                   let message = firstChoice["message"] as? [String: Any],
+                   let content = message["content"] as? String {
+                    return content
+                }
+                throw ChatGPTError.invalidResponse
+            case 401:
+                throw ChatGPTError.authenticationError("Invalid API key")
+            case 429:
+                throw ChatGPTError.rateLimitError("Rate limit exceeded")
+            case 500...599:
+                throw ChatGPTError.serverError("OpenAI server error")
+            default:
+                throw ChatGPTError.httpError(httpResponse.statusCode)
+            }
+        } catch let error as ChatGPTError {
+            throw error
+        } catch {
+            throw ChatGPTError.networkError(error.localizedDescription)
+        }
+    }
+    
+    func generateResponse(prompt: String) async throws -> String {
+        // Check if we have a cached response
+        if let cachedResponse = cache[prompt] {
+            return cachedResponse
+        }
+        
+        // Check if we're offline
+        if isOffline {
+            throw ChatGPTError.noInternetConnection
+        }
+        
+        // For now, simulate a response
+        try await Task.sleep(nanoseconds: 2_000_000_000)
+        let response = "Sample training program response"
+        
+        // Cache the response
+        cache[prompt] = response
+        
+        return response
     }
     
     deinit {

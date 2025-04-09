@@ -140,8 +140,7 @@ struct CompetitionsView: View {
                 }
             }
             .navigationBarItems(trailing: Button(action: { showingAddCompetition = true }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
+                Image(systemName: "plus")
                     .foregroundColor(.white)
             })
             .sheet(isPresented: $showingAddCompetition) {
@@ -300,21 +299,29 @@ struct AddCompetitionView: View {
             Form {
                 Section(header: Text("Competition Details")) {
                     TextField("Competition Title", text: $competitionTitle)
+                        .frame(maxWidth: .infinity)
+                    
                     DatePicker("Date", selection: $competitionDate, displayedComponents: [.date, .hourAndMinute])
+                        .frame(maxWidth: .infinity)
+                    
                     TextField("Location", text: $competitionLocation)
+                        .frame(maxWidth: .infinity)
                 }
             }
             .navigationTitle("Add Competition")
             .navigationBarItems(
                 leading: Button("Cancel") {
                     isPresented = false
-                },
+                }
+                .foregroundColor(.white),
                 trailing: Button("Save") {
                     saveCompetition()
                 }
                 .disabled(competitionTitle.isEmpty || competitionLocation.isEmpty)
+                .foregroundColor(.white)
             )
         }
+        .accentColor(.white)
     }
     
     private func saveCompetition() {

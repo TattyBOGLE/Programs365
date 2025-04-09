@@ -1,0 +1,129 @@
+// Tab Bar
+"Home" = "Home";
+"Programs" = "Programs";
+"Competitions" = "Competitions";
+"Injury" = "Injury";
+"More" = "More";
+
+// Landing View
+"Welcome to Programs365" = "Welcome to Programs365";
+"Your personalized training companion" = "Your personalized training companion";
+"Get Started" = "Get Started";
+"Start Training" = "Start Training";
+"Triple Jump" = "Triple Jump";
+"Long Jump" = "Long Jump";
+"High Jump" = "High Jump";
+"Pole Vault" = "Pole Vault";
+"Javelin" = "Javelin";
+"Discus" = "Discus";
+"Shot Put" = "Shot Put";
+"Hammer Throw" = "Hammer Throw";
+"Custom" = "Custom";
+
+// Programs View
+"Select Event" = "Select Event";
+"Select Week" = "Select Week";
+"Generate Program" = "Generate Program";
+"Loading..." = "Loading...";
+"Generating your personalized training program..." = "Generating your personalized training program...";
+"Save Program" = "Save Program";
+"Program Title" = "Program Title";
+"Program Notes" = "Program Notes";
+"Save" = "Save";
+"Cancel" = "Cancel";
+"Program Saved!" = "Program Saved!";
+"Saved Programs" = "Saved Programs";
+"No saved programs yet" = "No saved programs yet";
+"Delete" = "Delete";
+"Edit" = "Edit";
+"View" = "View";
+
+// More View
+"Profile" = "Profile";
+"View and edit your profile" = "View and edit your profile";
+"Saved Programs" = "Saved Programs";
+"Access your saved training programs" = "Access your saved training programs";
+"Injury Analysis" = "Injury Analysis";
+"Analyze and track injuries" = "Analyze and track injuries";
+"Progress" = "Progress";
+"Track your training progress" = "Track your training progress";
+"Nutrition Plans" = "Nutrition Plans";
+"Get personalized nutrition advice" = "Get personalized nutrition advice";
+"Training History" = "Training History";
+"View your past training sessions" = "View your past training sessions";
+"Settings" = "Settings";
+"Customize app settings" = "Customize app settings";
+"Help & Support" = "Help & Support";
+"Get help and support" = "Get help and support";
+"Achievements" = "Achievements";
+"Track your achievements" = "Track your achievements";
+
+// Settings
+"Account" = "Account";
+"Change Password" = "Change Password";
+"Privacy Settings" = "Privacy Settings";
+"Terms of Service" = "Terms of Service";
+"Privacy Policy" = "Privacy Policy";
+"Notifications" = "Notifications";
+"Push Notifications" = "Push Notifications";
+"Email Notifications" = "Email Notifications";
+"Appearance" = "Appearance";
+"Dark Mode" = "Dark Mode";
+"Language" = "Language";
+"About" = "About";
+"Version" = "Version";
+"Rate App" = "Rate App";
+"Share App" = "Share App";
+"Contact Us" = "Contact Us";
+"Log Out" = "Log Out";
+
+// Profile
+"Edit Profile" = "Edit Profile";
+"Name" = "Name";
+"Email" = "Email";
+"Phone" = "Phone";
+"Bio" = "Bio";
+"Profile Picture" = "Profile Picture";
+"Take Photo" = "Take Photo";
+"Choose from Library" = "Choose from Library";
+"Save Changes" = "Save Changes";
+
+// Injury Analysis
+"Add Injury" = "Add Injury";
+"Injury Type" = "Injury Type";
+"Injury Location" = "Injury Location";
+"Injury Severity" = "Injury Severity";
+"Injury Date" = "Injury Date";
+"Injury Notes" = "Injury Notes";
+"Add" = "Add";
+"Edit Injury" = "Edit Injury";
+"Update" = "Update";
+"Injury History" = "Injury History";
+"No injuries recorded" = "No injuries recorded";
+
+// Progress
+"Track Progress" = "Track Progress";
+"Progress Charts" = "Progress Charts";
+"No progress data available" = "No progress data available";
+
+// Nutrition Plans
+"Nutrition Advice" = "Nutrition Advice";
+"Meal Plans" = "Meal Plans";
+"No nutrition plans available" = "No nutrition plans available";
+
+// Training History
+"Past Sessions" = "Past Sessions";
+"No training history available" = "No training history available";
+
+// Help & Support
+"FAQ" = "FAQ";
+"Contact Support" = "Contact Support";
+"Send Message" = "Send Message";
+"Subject" = "Subject";
+"Message" = "Message";
+"Send" = "Send";
+"Message Sent" = "Message Sent";
+
+// Achievements
+"Your Achievements" = "Your Achievements";
+"No achievements yet" = "No achievements yet"; 

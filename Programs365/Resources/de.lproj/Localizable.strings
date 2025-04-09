@@ -1,0 +1,129 @@
+// Tab Bar
+"Home" = "Startseite";
+"Programs" = "Programme";
+"Competitions" = "Wettkämpfe";
+"Injury" = "Verletzungen";
+"More" = "Mehr";
+
+// Landing View
+"Welcome to Programs365" = "Willkommen bei Programs365";
+"Your personalized training companion" = "Ihr persönlicher Trainingsbegleiter";
+"Get Started" = "Loslegen";
+"Start Training" = "Training starten";
+"Triple Jump" = "Dreisprung";
+"Long Jump" = "Weitsprung";
+"High Jump" = "Hochsprung";
+"Pole Vault" = "Stabhochsprung";
+"Javelin" = "Speerwurf";
+"Discus" = "Diskuswurf";
+"Shot Put" = "Kugelstoßen";
+"Hammer Throw" = "Hammerwurf";
+"Custom" = "Benutzerdefiniert";
+
+// Programs View
+"Select Event" = "Veranstaltung auswählen";
+"Select Week" = "Woche auswählen";
+"Generate Program" = "Programm generieren";
+"Loading..." = "Laden...";
+"Generating your personalized training program..." = "Ihr personalisiertes Trainingsprogramm wird generiert...";
+"Save Program" = "Programm speichern";
+"Program Title" = "Programmtitel";
+"Program Notes" = "Programmnotizen";
+"Save" = "Speichern";
+"Cancel" = "Abbrechen";
+"Program Saved!" = "Programm gespeichert!";
+"Saved Programs" = "Gespeicherte Programme";
+"No saved programs yet" = "Noch keine Programme gespeichert";
+"Delete" = "Löschen";
+"Edit" = "Bearbeiten";
+"View" = "Anzeigen";
+
+// More View
+"Profile" = "Profil";
+"View and edit your profile" = "Profil anzeigen und bearbeiten";
+"Saved Programs" = "Gespeicherte Programme";
+"Access your saved training programs" = "Zugriff auf Ihre gespeicherten Trainingsprogramme";
+"Injury Analysis" = "Verletzungsanalyse";
+"Analyze and track injuries" = "Verletzungen analysieren und verfolgen";
+"Progress" = "Fortschritt";
+"Track your training progress" = "Verfolgen Sie Ihren Trainingsfortschritt";
+"Nutrition Plans" = "Ernährungspläne";
+"Get personalized nutrition advice" = "Erhalten Sie personalisierte Ernährungsberatung";
+"Training History" = "Trainingshistorie";
+"View your past training sessions" = "Ihre vergangenen Trainingseinheiten anzeigen";
+"Settings" = "Einstellungen";
+"Customize app settings" = "App-Einstellungen anpassen";
+"Help & Support" = "Hilfe & Support";
+"Get help and support" = "Hilfe und Support erhalten";
+"Achievements" = "Erfolge";
+"Track your achievements" = "Verfolgen Sie Ihre Erfolge";
+
+// Settings
+"Account" = "Konto";
+"Change Password" = "Passwort ändern";
+"Privacy Settings" = "Datenschutzeinstellungen";
+"Terms of Service" = "Nutzungsbedingungen";
+"Privacy Policy" = "Datenschutzrichtlinie";
+"Notifications" = "Benachrichtigungen";
+"Push Notifications" = "Push-Benachrichtigungen";
+"Email Notifications" = "E-Mail-Benachrichtigungen";
+"Appearance" = "Erscheinungsbild";
+"Dark Mode" = "Dunkelmodus";
+"Language" = "Sprache";
+"About" = "Über";
+"Version" = "Version";
+"Rate App" = "App bewerten";
+"Share App" = "App teilen";
+"Contact Us" = "Kontakt";
+"Log Out" = "Abmelden";
+
+// Profile
+"Edit Profile" = "Profil bearbeiten";
+"Name" = "Name";
+"Email" = "E-Mail";
+"Phone" = "Telefon";
+"Bio" = "Biografie";
+"Profile Picture" = "Profilbild";
+"Take Photo" = "Foto aufnehmen";
+"Choose from Library" = "Aus Bibliothek auswählen";
+"Save Changes" = "Änderungen speichern";
+
+// Injury Analysis
+"Add Injury" = "Verletzung hinzufügen";
+"Injury Type" = "Verletzungsart";
+"Injury Location" = "Verletzungsort";
+"Injury Severity" = "Verletzungsschwere";
+"Injury Date" = "Verletzungsdatum";
+"Injury Notes" = "Verletzungsnotizen";
+"Add" = "Hinzufügen";
+"Edit Injury" = "Verletzung bearbeiten";
+"Update" = "Aktualisieren";
+"Injury History" = "Verletzungshistorie";
+"No injuries recorded" = "Keine Verletzungen aufgezeichnet";
+
+// Progress
+"Track Progress" = "Fortschritt verfolgen";
+"Progress Charts" = "Fortschrittsdiagramme";
+"No progress data available" = "Keine Fortschrittsdaten verfügbar";
+
+// Nutrition Plans
+"Nutrition Advice" = "Ernährungsberatung";
+"Meal Plans" = "Mahlzeitenpläne";
+"No nutrition plans available" = "Keine Ernährungspläne verfügbar";
+
+// Training History
+"Past Sessions" = "Vergangene Einheiten";
+"No training history available" = "Keine Trainingshistorie verfügbar";
+
+// Help & Support
+"FAQ" = "FAQ";
+"Contact Support" = "Support kontaktieren";
+"Send Message" = "Nachricht senden";
+"Subject" = "Betreff";
+"Message" = "Nachricht";
+"Send" = "Senden";
+"Message Sent" = "Nachricht gesendet";
+
+// Achievements
+"Your Achievements" = "Ihre Erfolge";
+"No achievements yet" = "Noch keine Erfolge"; 
