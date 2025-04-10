@@ -706,7 +706,7 @@ struct MoreNutritionPlansView: View {
                             Text("Muscle Gain").tag(3)
                         }
                         .pickerStyle(SegmentedPickerStyle())
-                        .onChange(of: selectedPlan) { oldValue, newValue in
+                        .onChange(of: selectedPlan) { newValue in
                             updatePlanForSelection(newValue)
                         }
                     }
@@ -1525,20 +1525,72 @@ struct MoreSettingsView: View {
     var body: some View {
         NavigationView {
             Form {
-                AccountSection()
+                Section(header: Text("Account".localized)) {
+                    Button("Change Password".localized) {
+                        // Change password action
+                    }
+                    .foregroundColor(.white)
+                    
+                    Button("Privacy Settings".localized) {
+                        // Privacy settings action
+                    }
+                    .foregroundColor(.white)
+                    
+                    Button("Terms of Service".localized) {
+                        // Terms of service action
+                    }
+                    .foregroundColor(.white)
+                    
+                    Button("Privacy Policy".localized) {
+                        // Privacy policy action
+                    }
+                    .foregroundColor(.white)
+                }
                 
-                NotificationSection(
-                    pushNotifications: $pushNotifications,
-                    emailNotifications: $emailNotifications
-                )
+                Section(header: Text("Notifications".localized)) {
+                    Toggle("Push Notifications".localized, isOn: $pushNotifications)
+                    Toggle("Email Notifications".localized, isOn: $emailNotifications)
+                }
                 
-                AppearanceSection(darkMode: $darkMode)
+                Section(header: Text("Appearance".localized)) {
+                    Toggle("Dark Mode".localized, isOn: $darkMode)
+                }
                 
-                LanguageSection(localizationManager: localizationManager)
+                Section(header: Text("Language".localized)) {
+                    Picker("Language".localized, selection: $localizationManager.currentLanguage) {
+                        ForEach(localizationManager.availableLanguages) { language in
+                            Text(language.displayName).tag(language.rawValue)
+                        }
+                    }
+                }
                 
-                AboutSection()
+                Section(header: Text("About".localized)) {
+                    HStack {
+                        Text("Version".localized)
+                        Spacer()
+                        Text("1.0.0")
+                            .foregroundColor(.gray)
+                    }
+                    
+                    Button("Rate App".localized) {
+                        // Rate app action
+                    }
+                    
+                    Button("Share App".localized) {
+                        // Share app action
+                    }
+                    
+                    Button("Contact Us".localized) {
+                        // Contact us action
+                    }
+                }
                 
-                LogoutSection(showingLogoutAlert: $showingLogoutAlert)
+                Section {
+                    Button("Log Out".localized) {
+                        showingLogoutAlert = true
+                    }
+                    .foregroundColor(.red)
+                }
             }
             .navigationTitle("Settings".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -1558,107 +1610,6 @@ struct MoreSettingsView: View {
             } message: {
                 Text("Are you sure you want to log out?".localized)
             }
-        }
-    }
-}
-
-private struct AccountSection: View {
-    var body: some View {
-        Section(header: Text("Account".localized)) {
-            Button("Change Password".localized) {
-                // Change password action
-            }
-            .foregroundColor(.white)
-            
-            Button("Privacy Settings".localized) {
-                // Privacy settings action
-            }
-            .foregroundColor(.white)
-            
-            Button("Terms of Service".localized) {
-                // Terms of service action
-            }
-            .foregroundColor(.white)
-            
-            Button("Privacy Policy".localized) {
-                // Privacy policy action
-            }
-            .foregroundColor(.white)
-        }
-    }
-}
-
-private struct NotificationSection: View {
-    @Binding var pushNotifications: Bool
-    @Binding var emailNotifications: Bool
-    
-    var body: some View {
-        Section(header: Text("Notifications".localized)) {
-            Toggle("Push Notifications".localized, isOn: $pushNotifications)
-            Toggle("Email Notifications".localized, isOn: $emailNotifications)
-        }
-    }
-}
-
-private struct AppearanceSection: View {
-    @Binding var darkMode: Bool
-    
-    var body: some View {
-        Section(header: Text("Appearance".localized)) {
-            Toggle("Dark Mode".localized, isOn: $darkMode)
-        }
-    }
-}
-
-private struct LanguageSection: View {
-    @ObservedObject var localizationManager: LocalizationManager
-    
-    var body: some View {
-        Section(header: Text("Language".localized)) {
-            let languages = localizationManager.availableLanguages
-            Picker("Language".localized, selection: $localizationManager.currentLanguage) {
-                ForEach(languages) { language in
-                    Text(language.displayName).tag(language.rawValue)
-                }
-            }
-        }
-    }
-}
-
-private struct AboutSection: View {
-    var body: some View {
-        Section(header: Text("About".localized)) {
-            HStack {
-                Text("Version".localized)
-                Spacer()
-                Text("1.0.0")
-                    .foregroundColor(.gray)
-            }
-            
-            Button("Rate App".localized) {
-                // Rate app action
-            }
-            
-            Button("Share App".localized) {
-                // Share app action
-            }
-            
-            Button("Contact Us".localized) {
-                // Contact us action
-            }
-        }
-    }
-}
-
-private struct LogoutSection: View {
-    @Binding var showingLogoutAlert: Bool
-    
-    var body: some View {
-        Section {
-            Button("Log Out".localized) {
-                showingLogoutAlert = true
-            }
-            .foregroundColor(.red)
         }
     }
 }
@@ -1887,105 +1838,267 @@ struct WebView: UIViewRepresentable {
 struct CoachesCornerView: View {
     @Environment(\.dismiss) private var dismiss
     
-    private let ukTopCoaches: [Coach] = [
-        Coach(name: "Aston Moore MBE", specialty: "Multi-events", achievement: "Lifetime Achievement Award 2024", notableAthletes: "Katarina Johnson-Thompson"),
-        Coach(name: "Trevor Painter", specialty: "Middle-distance", achievement: "High Performance Coach of the Year 2024", notableAthletes: "Keely Hodgkinson"),
-        Coach(name: "Paul Moseley", specialty: "Para-athletics", achievement: "Great Coaching Moment 2024", notableAthletes: "Hannah Cockroft"),
-        Coach(name: "Christian Malcolm", specialty: "Sprints", achievement: "Head Coach British Athletics Olympic Programme", notableAthletes: "")
-    ]
-    
-    private var heroGradient: LinearGradient {
-        LinearGradient(
-            gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
-    
-    private var heroTitleView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Coaches Corner")
-                .font(.system(size: 40, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text("Resources and tools for coaches")
-                .font(.title3)
-                .foregroundColor(.white.opacity(0.9))
-        }
-        .padding()
-    }
-    
-    private var heroBannerView: some View {
-        ZStack(alignment: .bottomLeading) {
-            Image("track_hero_banner")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(height: 300)
-                .clipped()
-                .overlay(heroGradient)
-            
-            heroTitleView
-        }
-    }
-    
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 0) {
-                    heroBannerView
+                    // Hero Banner
+                    ZStack(alignment: .bottomLeading) {
+                        Image("track_hero_banner")  // Using existing track banner as temporary image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 300)
+                            .clipped()
+                            .overlay(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Coaches Corner")
+                                .font(.system(size: 40, weight: .bold))
+                                .foregroundColor(.white)
+                            
+                            Text("Resources and tools for coaches")
+                                .font(.title3)
+                                .foregroundColor(.white.opacity(0.9))
+                        }
+                        .padding()
+                    }
                     
                     // Content Sections
                     VStack(spacing: 20) {
-                        coachesSection
-                        featuredResourcesSection
+                        // UK Top Coaches Section
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("UK Top Coaches")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Text("Recognized for excellence in athletics coaching")
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                            
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: 16) {
+                                ForEach(ukTopCoaches, id: \.name) { coach in
+                                    CoachCard(coach: coach)
+                                }
+                            }
+                        }
+                        .padding(.top)
+                        
+                        // Featured Resources
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Featured Resources")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 16) {
+                                    ForEach(1...5, id: \.self) { index in
+                                        ResourceCard(
+                                            title: getResourceTitle(index),
+                                            description: getResourceDescription(index),
+                                            icon: getResourceIcon(index)
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
+                        .padding(.top)
+                        
+                        // Coaching Tools
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Coaching Tools")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            VStack(spacing: 12) {
+                                ForEach(1...4, id: \.self) { index in
+                                    ToolCard(
+                                        title: getToolTitle(index),
+                                        description: getToolDescription(index),
+                                        icon: getToolIcon(index)
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.top)
+                        
+                        // Latest Articles
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Latest Articles")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            VStack(spacing: 12) {
+                                ForEach(1...3, id: \.self) { index in
+                                    ArticleCard(
+                                        title: getArticleTitle(index),
+                                        date: getArticleDate(index)
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.top)
                     }
-                    .padding(.top)
+                    .padding()
                 }
             }
+            .background(Color.black.edgesIgnoringSafeArea(.all))
             .navigationBarTitleDisplayMode(.inline)
-            .background(Color.black)
-        }
-    }
-    
-    private var coachesSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("UK Top Coaches")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text("Recognized for excellence in athletics coaching")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 16) {
-                ForEach(ukTopCoaches) { coach in
-                    CoachCard(coach: coach)
-                }
-            }
-        }
-        .padding()
-    }
-    
-    private var featuredResourcesSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Featured Resources")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(1...5, id: \.self) { index in
-                        ResourceCard()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .foregroundColor(.white)
                     }
                 }
             }
         }
-        .padding()
+    }
+    
+    // UK Top Coaches Data
+    private let ukTopCoaches: [Coach] = [
+        Coach(name: "Aston Moore MBE", specialty: "Multi-events", achievement: "Lifetime Achievement Award 2024", notableAthletes: "Katarina Johnson-Thompson"),
+        Coach(name: "Trevor Painter", specialty: "Middle-distance", achievement: "High Performance Coach of the Year 2024", notableAthletes: "Keely Hodgkinson"),
+        Coach(name: "Paul Moseley", specialty: "Para-athletics", achievement: "Great Coaching Moment 2024", notableAthletes: "Hannah Cockroft"),
+        Coach(name: "Christian Malcolm", specialty: "Sprints", achievement: "Head Coach British Athletics Olympic Programme", notableAthletes: ""),
+        Coach(name: "Steve Cram", specialty: "Middle-distance", achievement: "Former World Record Holder", notableAthletes: "Laura Muir"),
+        Coach(name: "Laura Weightman", specialty: "Distance", achievement: "Former Olympian", notableAthletes: "Laura Muir"),
+        Coach(name: "Jenny Archer MBE", specialty: "Wheelchair Racing", achievement: "Multiple Paralympic Medals", notableAthletes: "David Weir"),
+        Coach(name: "Tony Jarrett", specialty: "Sprint Hurdles", achievement: "GB Sprint Hurdles Development Coach", notableAthletes: ""),
+        Coach(name: "Malcolm Arnold OBE", specialty: "Hurdles", achievement: "Legendary Coach", notableAthletes: "Colin Jackson"),
+        Coach(name: "Paula Dunn MBE", specialty: "Para-athletics", achievement: "Former Paralympic Head Coach", notableAthletes: ""),
+        Coach(name: "Christine Harrison-Bloomfield", specialty: "Leadership", achievement: "UK Sport Female Leadership Program", notableAthletes: ""),
+        Coach(name: "Shani Palmer", specialty: "Leadership", achievement: "UK Sport Female Leadership Program", notableAthletes: ""),
+        Coach(name: "Coral Nourrice", specialty: "Leadership", achievement: "UK Sport Female Leadership Program", notableAthletes: ""),
+        Coach(name: "John Anderson", specialty: "Multi-discipline", achievement: "TV Personality & Coach", notableAthletes: ""),
+        Coach(name: "Jamie Bowie", specialty: "Track & Field", achievement: "Scottish Coach", notableAthletes: ""),
+        Coach(name: "Jim Bradley", specialty: "Sprinting", achievement: "Renowned Coach", notableAthletes: ""),
+        Coach(name: "Andy Coogan", specialty: "Middle-distance", achievement: "Author & Coach", notableAthletes: ""),
+        Coach(name: "Bill Foster", specialty: "Endurance", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Alex Currie", specialty: "Sprints & Hurdles", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Matt Ashley", specialty: "High Jump", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Grant Barker", specialty: "Sprints", achievement: "Experienced Coach", notableAthletes: ""),
+        Coach(name: "John Davies", specialty: "Sprints", achievement: "Experienced Coach", notableAthletes: ""),
+        Coach(name: "Ashley Bryant", specialty: "Multi-events", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Andy Carrott", specialty: "Sprints", achievement: "Former Olympian", notableAthletes: ""),
+        Coach(name: "Ailsa Wallace", specialty: "High Jump", achievement: "Oxford University Coach", notableAthletes: ""),
+        Coach(name: "Kay Reynolds", specialty: "Sprints & Hurdles", achievement: "Oxford University Coach", notableAthletes: ""),
+        Coach(name: "Richard Kilty", specialty: "Sprints", achievement: "Former World Champion", notableAthletes: "Louie Hinchliffe"),
+        Coach(name: "Keith Hunter", specialty: "Jumps & Speed", achievement: "European Gold & Para World Bronze Coach", notableAthletes: "European Gold Medalist, Para World Bronze Champion"),
+        Coach(name: "Clare Buckle", specialty: "Para Jumps", achievement: "GB Para Jumps Coach", notableAthletes: ""),
+        Coach(name: "Leon Baptiste", specialty: "Sprints & Relays", achievement: "Commonwealth Games Gold", notableAthletes: ""),
+        Coach(name: "Ryan Freckleton", specialty: "Sprints", achievement: "GB Junior & Senior Coach", notableAthletes: ""),
+        Coach(name: "Stefano Cugnetto", specialty: "400m & Relays", achievement: "GB Squad Coach", notableAthletes: ""),
+        Coach(name: "Paul Wilson", specialty: "Javelin", achievement: "GB Lead Coach", notableAthletes: ""),
+        Coach(name: "Alison O'Riordan", specialty: "Throws", achievement: "GB Para & Able-bodied Coach", notableAthletes: ""),
+        Coach(name: "Mike Holmes", specialty: "Combined Events", achievement: "GB Coach", notableAthletes: ""),
+        Coach(name: "Zane Duquemin", specialty: "Discus & Shot Put", achievement: "GB Coach", notableAthletes: ""),
+        Coach(name: "Tom Craggs", specialty: "Endurance", achievement: "British Endurance Coach", notableAthletes: ""),
+        Coach(name: "Charlotte Fisher", specialty: "Marathon", achievement: "GB Marathon Coach", notableAthletes: ""),
+        Coach(name: "Andy Bibby", specialty: "Para Endurance", achievement: "National Level Coach", notableAthletes: ""),
+        Coach(name: "Jim Edwards", specialty: "Seated Throws", achievement: "GB Specialist Coach", notableAthletes: ""),
+        Coach(name: "David Turner", specialty: "Para Throws", achievement: "Former National Coach", notableAthletes: ""),
+        Coach(name: "Sam Ruddock", specialty: "Throws", achievement: "Former GB Para Athlete", notableAthletes: ""),
+        Coach(name: "Ian Thompson", specialty: "Wheelchair Racing", achievement: "Former GB Coach", notableAthletes: ""),
+        Coach(name: "Tanni Grey-Thompson", specialty: "Wheelchair Racing", achievement: "Paralympic Champion", notableAthletes: ""),
+        Coach(name: "Benke Blomkvist", specialty: "Sprints & Hurdles", achievement: "Former UKA Coach", notableAthletes: ""),
+        Coach(name: "Steve Fudge", specialty: "Sprints", achievement: "Former GB Coach", notableAthletes: "")
+    ]
+    
+    // Helper functions for content
+    private func getResourceTitle(_ index: Int) -> String {
+        let titles = [
+            "Training Periodization Guide",
+            "Athlete Assessment Tools",
+            "Competition Planning",
+            "Recovery Protocols",
+            "Technical Analysis"
+        ]
+        return titles[index - 1]
+    }
+    
+    private func getResourceDescription(_ index: Int) -> String {
+        let descriptions = [
+            "Learn how to structure training cycles",
+            "Evaluate athlete performance",
+            "Plan for upcoming competitions",
+            "Implement effective recovery strategies",
+            "Analyze and improve technique"
+        ]
+        return descriptions[index - 1]
+    }
+    
+    private func getResourceIcon(_ index: Int) -> String {
+        let icons = [
+            "calendar.badge.clock",
+            "person.2.fill",
+            "trophy.fill",
+            "bed.double.fill",
+            "video.fill"
+        ]
+        return icons[index - 1]
+    }
+    
+    private func getToolTitle(_ index: Int) -> String {
+        let titles = [
+            "Session Planner",
+            "Performance Tracker",
+            "Video Analysis",
+            "Team Management"
+        ]
+        return titles[index - 1]
+    }
+    
+    private func getToolDescription(_ index: Int) -> String {
+        let descriptions = [
+            "Create and manage training sessions",
+            "Track athlete progress over time",
+            "Analyze technique with video tools",
+            "Manage your team roster and schedules"
+        ]
+        return descriptions[index - 1]
+    }
+    
+    private func getToolIcon(_ index: Int) -> String {
+        let icons = [
+            "list.clipboard.fill",
+            "chart.line.uptrend.xyaxis",
+            "video.badge.plus",
+            "person.3.fill"
+        ]
+        return icons[index - 1]
+    }
+    
+    private func getArticleTitle(_ index: Int) -> String {
+        let titles = [
+            "The Science of Periodization",
+            "Building Mental Toughness",
+            "Nutrition for Performance",
+            "Injury Prevention Strategies"
+        ]
+        return titles[index - 1]
+    }
+    
+    private func getArticleDate(_ index: Int) -> String {
+        let dates = [
+            "June 15, 2023",
+            "May 28, 2023",
+            "April 10, 2023"
+        ]
+        return dates[index - 1]
     }
 }
 
@@ -2035,14 +2148,107 @@ struct CoachCard: View {
 }
 
 struct ResourceCard: View {
+    let title: String
+    let description: String
+    let icon: String
+    
     var body: some View {
-        // Implementation of ResourceCard
-        Text("Resource Card")
+        VStack(alignment: .leading, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 30))
+                .foregroundColor(.red)
+                .frame(width: 60, height: 60)
+                .background(Color.red.opacity(0.2))
+                .clipShape(Circle())
+            
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.white)
+                .lineLimit(2)
+            
+            Text(description)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .lineLimit(2)
+        }
+        .frame(width: 200)
+        .padding()
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
-struct CoachesCornerView_Previews: PreviewProvider {
-    static var previews: some View {
-        CoachesCornerView()
+struct ToolCard: View {
+    let title: String
+    let description: String
+    let icon: String
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundColor(.blue)
+                .frame(width: 50, height: 50)
+                .background(Color.blue.opacity(0.2))
+                .clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .lineLimit(2)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.gray)
+        }
+        .padding()
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
+    }
+}
+
+struct ArticleCard: View {
+    let title: String
+    let date: String
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Text(date)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "arrow.right")
+                .foregroundColor(.red)
+        }
+        .padding()
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
     }
 } 

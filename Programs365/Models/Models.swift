@@ -144,23 +144,20 @@ public enum TrackEvent: String, CaseIterable, Identifiable {
 
 // MARK: - Training Terms
 public enum TrainingTerm: String, CaseIterable, Identifiable {
-    case winter = "Winter"
-    case summer = "Summer"
-    case preCompetition = "Pre-Competition"
-    case competition = "Competition"
+    case shortTerm = "Short term"
+    case mediumTerm = "Medium term"
+    case longTerm = "Long term"
     
     public var id: String { rawValue }
     
     public var description: String {
         switch self {
-        case .winter:
-            return "Focus on building strength and endurance"
-        case .summer:
-            return "Develop speed and technique"
-        case .preCompetition:
-            return "Fine-tune race preparation"
-        case .competition:
-            return "Peak performance and racing"
+        case .shortTerm:
+            return "4-6 weeks of focused training for immediate performance improvements"
+        case .mediumTerm:
+            return "8-12 weeks of progressive training to build strength and technique"
+        case .longTerm:
+            return "16+ weeks of comprehensive training for major competitions"
         }
     }
 }

@@ -46,7 +46,7 @@ enum ChatGPTError: LocalizedError {
 }
 
 @MainActor
-public final class ChatGPTService: ObservableObject {
+final class ChatGPTService: ObservableObject {
     private let apiKey: String
     private let baseURL = "https://api.openai.com/v1/chat/completions"
     private let wifiMonitor = NWPathMonitor(requiredInterfaceType: .wifi)
@@ -487,52 +487,53 @@ public final class ChatGPTService: ObservableObject {
         }
     }
     
-    private func extractEvent(from prompt: String) -> String {
-        // Look for event in the prompt
-        if prompt.contains("sprint") {
-            return "sprints"
-        } else if prompt.contains("middle") || prompt.contains("800") || prompt.contains("1500") {
-            return "middleDistance"
-        } else if prompt.contains("long") || prompt.contains("5000") || prompt.contains("10000") {
-            return "longDistance"
-        }
-        return "general"
-    }
-    
     private func extractAge(from prompt: String) -> String {
-        // Look for age group in the prompt
-        if prompt.contains("U12") || prompt.contains("U13") || prompt.contains("U14") {
-            return "U14"
-        } else if prompt.contains("U15") || prompt.contains("U16") || prompt.contains("U17") {
-            return "U17"
-        } else if prompt.contains("U18") || prompt.contains("U19") || prompt.contains("U20") {
-            return "U20"
-        }
-        return "senior"
+        // Simple extraction of age group from prompt
+        if prompt.contains("U12") { return "U12" }
+        if prompt.contains("U14") { return "U14" }
+        if prompt.contains("U16") { return "U16" }
+        if prompt.contains("U18") { return "U18" }
+        if prompt.contains("U20") { return "U20" }
+        return "Senior"
     }
     
-    private func extractTerm(from prompt: String) -> String {
-        // Look for term in the prompt
-        if prompt.contains("Pre-Competition") {
-            return "Pre-Competition"
-        } else if prompt.contains("Competition") {
-            return "Competition"
-        } else if prompt.contains("Off-Season") {
-            return "Off-Season"
+    private func extractEvent(from prompt: String) -> String {
+        // Extract specific event from prompt
+        let events = [
+            // Sprints
+            "75m", "100m", "150m", "200m", "300m", "400m",
+            // Middle Distance
+            "800m", "1200m", "1500m", "3000m",
+            // Hurdles
+            "75m Hurdles", "80m Hurdles", "100m Hurdles", "110m Hurdles", "300m Hurdles", "400m Hurdles",
+            // Jumps
+            "Long Jump", "Triple Jump", "High Jump", "Pole Vault",
+            // Throws
+            "Shot Put", "Discus", "Javelin", "Hammer"
+        ]
+        
+        for event in events {
+            if prompt.contains(event) {
+                return event
+            }
         }
-        return "General"
+        
+        // Fallback to broader categories if specific event not found
+        if prompt.contains("Sprints") { return "Sprints" }
+        if prompt.contains("Middle Distance") { return "Middle Distance" }
+        if prompt.contains("Long Distance") { return "Long Distance" }
+        if prompt.contains("Hurdles") { return "Hurdles" }
+        if prompt.contains("Jumps") { return "Jumps" }
+        if prompt.contains("Throws") { return "Throws" }
+        return "General Training"
     }
     
-    private func extractPeriod(from prompt: String) -> String {
-        // Look for period in the prompt
-        if prompt.contains("General") {
-            return "General"
-        } else if prompt.contains("Specific") {
-            return "Specific"
-        } else if prompt.contains("Competition") {
-            return "Competition"
+    private func extractWeek(from prompt: String) -> String {
+        // Extract week number from prompt
+        if let range = prompt.range(of: "Week \\d+", options: .regularExpression) {
+            return String(prompt[range])
         }
-        return "General"
+        return "Week 1"
     }
     
     func getInjuryPrevention(for injury: Injury) async throws -> String {

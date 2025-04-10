@@ -221,7 +221,7 @@ struct LandingView: View {
                         
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Welcome to Programs365".localized)
-                                .font(.system(size: 40, weight: .heavy))
+                                .font(.system(size: 40, weight: .bold))
                                 .foregroundColor(.white)
                             
                             Text("Your personalized training companion".localized)
