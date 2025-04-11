@@ -142,26 +142,6 @@ public enum TrackEvent: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Training Terms
-public enum TrainingTerm: String, CaseIterable, Identifiable {
-    case shortTerm = "Short term"
-    case mediumTerm = "Medium term"
-    case longTerm = "Long term"
-    
-    public var id: String { rawValue }
-    
-    public var description: String {
-        switch self {
-        case .shortTerm:
-            return "4-6 weeks of focused training for immediate performance improvements"
-        case .mediumTerm:
-            return "8-12 weeks of progressive training to build strength and technique"
-        case .longTerm:
-            return "16+ weeks of comprehensive training for major competitions"
-        }
-    }
-}
-
 // MARK: - Training Periods
 public enum TrainingPeriod: String, CaseIterable, Identifiable {
     case general = "General"

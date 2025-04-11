@@ -1,4 +1,5 @@
 import SwiftUI
+import Foundation
 
 // MARK: - Enhanced Program Parameter Selection View
 struct EnhancedProgramParametersView: View {
@@ -13,19 +14,19 @@ struct EnhancedProgramParametersView: View {
                 // Basic Parameters
                 Section(header: Text("Basic Parameters")) {
                     Picker("Age Group", selection: $parameters.ageGroup) {
-                        ForEach(AgeGroup.allCases) { ageGroup in
+                        ForEach(AgeGroup.allCases, id: \.rawValue) { ageGroup in
                             Text(ageGroup.rawValue).tag(ageGroup)
                         }
                     }
                     
                     Picker("Event", selection: $parameters.event) {
-                        ForEach(parameters.ageGroup.allowedEvents) { event in
+                        ForEach(parameters.ageGroup.allowedEvents, id: \.rawValue) { event in
                             Text(event.rawValue).tag(event)
                         }
                     }
                     
                     Picker("Gender", selection: $parameters.gender) {
-                        ForEach(Gender.allCases) { gender in
+                        ForEach(Gender.allCases, id: \.rawValue) { gender in
                             Text(gender.rawValue).tag(gender)
                         }
                     }
@@ -34,13 +35,13 @@ struct EnhancedProgramParametersView: View {
                 // Training Context
                 Section(header: Text("Training Context")) {
                     Picker("Term", selection: $parameters.term) {
-                        ForEach(TrainingTerm.allCases) { term in
+                        ForEach([TrainingTerm.shortTerm, .mediumTerm, .longTerm], id: \.rawValue) { term in
                             Text(term.rawValue).tag(term)
                         }
                     }
                     
                     Picker("Period", selection: $parameters.period) {
-                        ForEach(TrainingPeriod.allCases) { period in
+                        ForEach(TrainingPeriod.allCases, id: \.rawValue) { period in
                             Text(period.rawValue).tag(period)
                         }
                     }

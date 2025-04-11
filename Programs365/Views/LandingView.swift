@@ -305,41 +305,6 @@ struct LandingView: View {
     }
 }
 
-struct ProgramCard: View {
-    let title: String
-    let icon: String
-    let color: Color
-    @Binding var navigateToPrograms: Bool
-    
-    var body: some View {
-        Button(action: {
-            navigateToPrograms = true
-        }) {
-            VStack(spacing: 15) {
-                Image(systemName: icon)
-                    .font(.system(size: 30))
-                    .foregroundColor(color)
-                
-                Text(title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text("Start Training".localized)
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    .background(color)
-                    .cornerRadius(20)
-            }
-            .frame(maxWidth: .infinity)
-            .padding()
-            .background(Color.gray.opacity(0.2))
-            .cornerRadius(15)
-        }
-    }
-}
-
 // Partner Logo Component
 struct PartnerLogo: View {
     let imageName: String

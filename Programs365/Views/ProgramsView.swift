@@ -1,5 +1,4 @@
 import SwiftUI
-import Foundation
 import UIKit
 
 // MARK: - Views
@@ -43,93 +42,6 @@ struct AgeGroupCard: View {
                     .stroke(isSelected ? Color.red : Color.clear, lineWidth: 2)
             )
         }
-    }
-}
-
-struct EventCard: View {
-    let event: TrackEvent
-    
-    private var categoryIcon: String {
-        switch event.category {
-        case "Field Events":
-            return "sportscourt.fill"
-        case "Sprints":
-            return "figure.run"
-        case "Middle Distance":
-            return "figure.run.circle"
-        case "Long Distance":
-            return "figure.hiking"
-        case "Hurdles":
-            return "figure.step.training"
-        case "Relays":
-            return "person.3.fill"
-        default:
-            return "figure.run"
-        }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: categoryIcon)
-                    .font(.system(size: 24))
-                    .foregroundColor(.red)
-                
-                Text(event.category)
-                    .font(.subheadline)
-                    .foregroundColor(.red)
-            }
-            
-            Text(event.rawValue)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            
-            Spacer()
-            
-            HStack {
-                Text("Select Term")
-                    .foregroundColor(.red)
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.red)
-            }
-        }
-        .frame(height: 160)
-        .padding(20)
-        .background(Color(UIColor.systemGray6))
-        .cornerRadius(16)
-    }
-}
-
-struct TermCard: View {
-    let term: TrainingTerm
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(term.rawValue)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text(term.description)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-                .lineLimit(3)
-            
-            Spacer()
-            
-            HStack {
-                Text("View Periods")
-                    .foregroundColor(.red)
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.red)
-            }
-        }
-        .frame(height: 200)
-        .padding(20)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(16)
     }
 }
 
@@ -481,6 +393,11 @@ struct ProgramsView: View {
                     EventsView(ageGroup: ageGroup, initialCategory: initialCategory)
                 }
             }
+            .sheet(isPresented: $showingTermSelection) {
+                if let event = selectedEvent {
+                    TermSelectionView(event: event, selectedTerm: $selectedTerm)
+                }
+            }
         }
     }
     
@@ -709,6 +626,8 @@ struct EventsView: View {
     let ageGroup: AgeGroup
     let initialCategory: String?
     @State private var selectedGender: Gender = .male
+    @State private var selectedEvent: TrackEvent?
+    @State private var showingTermSelection = false
     
     var filteredEvents: [TrackEvent] {
         let events = ageGroup.allowedEvents.filter { event in
@@ -748,8 +667,11 @@ struct EventsView: View {
                 // Events Grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     ForEach(filteredEvents, id: \.self) { event in
-                        NavigationLink(destination: TermsView(event: event, ageGroup: ageGroup)) {
-                            EventCard(event: event)
+                        Button(action: {
+                            selectedEvent = event
+                            showingTermSelection = true
+                        }) {
+                            TrackEventCard(event: event)
                         }
                     }
                 }
@@ -758,26 +680,74 @@ struct EventsView: View {
         }
         .navigationTitle("\(ageGroup.rawValue) Events")
         .background(Color.black.edgesIgnoringSafeArea(.all))
+        .sheet(isPresented: $showingTermSelection) {
+            if let event = selectedEvent {
+                TermsView(event: event, ageGroup: ageGroup)
+            }
+        }
     }
 }
 
 struct TermsView: View {
     let event: TrackEvent
     let ageGroup: AgeGroup
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedTerm: TrainingTerm?
     
     var body: some View {
-        ScrollView {
-            LazyVGrid(columns: [GridItem(.flexible())], spacing: 16) {
-                ForEach(TrainingTerm.allCases, id: \.self) { term in
-                    NavigationLink(destination: PeriodsView(event: event, ageGroup: ageGroup, term: term)) {
-                        TermCard(term: term)
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Hero Banner
+                    ZStack(alignment: .bottomLeading) {
+                        Image("track")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 200)
+                            .clipped()
+                            .overlay(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
+                                )
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(event.rawValue)
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Text("Select your training term")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.9))
+                        }
+                        .padding()
                     }
+                    
+                    // Terms Grid
+                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 16) {
+                        ForEach(TrainingTerm.allCases, id: \.rawValue) { term in
+                            Button(action: {
+                                selectedTerm = term
+                            }) {
+                                TermCard(term: term)
+                            }
+                        }
+                    }
+                    .padding()
                 }
             }
-            .padding()
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .navigationBarItems(leading: Button("Back") { dismiss() })
+            .sheet(item: $selectedTerm) { term in
+                NavigationView {
+                    PeriodsView(event: event, ageGroup: ageGroup, term: term)
+                }
+            }
         }
-        .navigationTitle("\(event.rawValue) Terms")
-        .background(Color.black.edgesIgnoringSafeArea(.all))
     }
 }
 
@@ -806,6 +776,62 @@ struct PeriodsView: View {
         }
         .navigationTitle("\(term.rawValue) Periods")
         .background(Color.black.edgesIgnoringSafeArea(.all))
+    }
+}
+
+struct TrackEventCard: View {
+    let event: TrackEvent
+    
+    private var categoryIcon: String {
+        switch event.category {
+        case "Field Events":
+            return "sportscourt.fill"
+        case "Sprints":
+            return "figure.run"
+        case "Middle Distance":
+            return "figure.run.circle"
+        case "Long Distance":
+            return "figure.hiking"
+        case "Hurdles":
+            return "figure.step.training"
+        case "Relays":
+            return "person.3.fill"
+        default:
+            return "figure.run"
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: categoryIcon)
+                    .font(.system(size: 24))
+                    .foregroundColor(.red)
+                
+                Text(event.category)
+                    .font(.subheadline)
+                    .foregroundColor(.red)
+            }
+            
+            Text(event.rawValue)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            
+            Spacer()
+            
+            HStack {
+                Text("Select Term")
+                    .foregroundColor(.red)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.red)
+            }
+        }
+        .frame(height: 160)
+        .padding(20)
+        .background(Color(UIColor.systemGray6))
+        .cornerRadius(16)
     }
 }
 
@@ -867,7 +893,7 @@ struct EventSelectionView: View {
                                 selectedEvent = event
                                 dismiss()
                             }) {
-                                EventCard(event: event)
+                                TrackEventCard(event: event)
                             }
                         }
                     }
@@ -891,150 +917,38 @@ struct TermSelectionView: View {
     let event: TrackEvent
     @Binding var selectedTerm: TrainingTerm?
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedDuration: TermDuration?
-    
-    enum TermDuration: String, CaseIterable {
-        case short = "Short term"
-        case medium = "Medium term"
-        case long = "Long term"
-        
-        var description: String {
-            switch self {
-            case .short:
-                return "4-6 weeks of focused training for immediate performance improvements"
-            case .medium:
-                return "8-12 weeks of progressive training to build strength and technique"
-            case .long:
-                return "16+ weeks of comprehensive training for major competitions"
-            }
-        }
-        
-        var term: TrainingTerm {
-            switch self {
-            case .short:
-                return .shortTerm
-            case .medium:
-                return .mediumTerm
-            case .long:
-                return .longTerm
-            }
-        }
-        
-        var periods: [TrainingPeriod] {
-            switch self {
-            case .short:
-                return [.specific, .competition]
-            case .medium:
-                return [.general, .specific, .competition]
-            case .long:
-                return TrainingPeriod.allCases
-            }
-        }
-    }
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 0) {
-                    // Hero Banner
-                    ZStack(alignment: .bottomLeading) {
-                        Image("wheelchair")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 200)
-                            .clipped()
-                            .overlay(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
-                                    startPoint: .bottom,
-                                    endPoint: .top
-                                )
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Para Athletics")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            
-                            Text("Specialized training programs for para-athletes")
-                                .font(.subheadline)
-                                .foregroundColor(.white.opacity(0.9))
-                        }
+                VStack(spacing: 16) {
+                    Text("Select Training Term")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding()
-                    }
                     
-                    if let duration = selectedDuration {
-                        // Show terms for selected duration
-                        LazyVGrid(columns: [
-                            GridItem(.flexible(), spacing: 16),
-                            GridItem(.flexible(), spacing: 16)
-                        ], spacing: 16) {
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 16),
+                        GridItem(.flexible(), spacing: 16)
+                    ], spacing: 16) {
+                        ForEach(TrainingTerm.allCases, id: \.self) { term in
                             Button(action: {
-                                selectedTerm = duration.term
+                                selectedTerm = term
                                 dismiss()
                             }) {
-                                TermCard(term: duration.term)
+                                TermCard(term: term)
                             }
                         }
-                        .padding()
-                    } else {
-                        // Show duration options
-                        LazyVGrid(columns: [
-                            GridItem(.flexible(), spacing: 16),
-                            GridItem(.flexible(), spacing: 16)
-                        ], spacing: 16) {
-                            ForEach(TermDuration.allCases, id: \.self) { duration in
-                                Button(action: {
-                                    withAnimation {
-                                        selectedDuration = duration
-                                    }
-                                }) {
-                                    VStack(alignment: .leading, spacing: 16) {
-                                        Text(duration.rawValue)
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(.white)
-                                        
-                                        Text(duration.description)
-                                            .font(.subheadline)
-                                            .foregroundColor(.gray)
-                                            .lineLimit(4)
-                                        
-                                        Spacer()
-                                        
-                                        HStack {
-                                            Text("Select Term")
-                                                .foregroundColor(.red)
-                                            Image(systemName: "chevron.right")
-                                                .foregroundColor(.red)
-                                        }
-                                    }
-                                    .frame(height: 200)
-                                    .padding(20)
-                                    .background(Color.gray.opacity(0.1))
-                                    .cornerRadius(16)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(Color.red.opacity(0.3), lineWidth: 1)
-                                    )
-                                }
-                            }
-                        }
-                        .padding()
                     }
+                    .padding()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { 
-                        if selectedDuration != nil {
-                            selectedDuration = nil
-                        } else {
-                            dismiss()
-                        }
-                    }) {
+                    Button(action: { dismiss() }) {
                         Image(systemName: "chevron.left")
                             .foregroundColor(.white)
                     }
@@ -1614,302 +1528,6 @@ struct ParaClassificationCard: View {
             return "Paralympic Classification"
         }
     }
-}
-
-struct SavedProgramsView: View {
-    @ObservedObject private var savedProgramManager = SavedProgramManager.shared
-    @State private var selectedFilter: ProgramFilter = .all
-    @State private var showingFilterSheet = false
-    @State private var searchText = ""
-    @State private var selectedProgram: SavedProgram?
-    @State private var showingDetail = false
-    
-    var filteredPrograms: [SavedProgram] {
-        savedProgramManager.savedPrograms.filter { program in
-            let matchesFilter = selectedFilter == .all || program.category.rawValue == selectedFilter.rawValue
-            let matchesSearch = searchText.isEmpty || 
-                program.name.localizedCaseInsensitiveContains(searchText) ||
-                program.description.localizedCaseInsensitiveContains(searchText)
-            return matchesFilter && matchesSearch
-        }
-    }
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Search bar
-                SearchBar(text: $searchText)
-                    .padding()
-                
-                // Filter buttons
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        FilterButton(title: "All", isSelected: selectedFilter == .all) {
-                            selectedFilter = .all
-                        }
-                        
-                        ForEach(ProgramFilter.allCases.filter { $0 != .all }, id: \.self) { filter in
-                            FilterButton(title: filter.rawValue, isSelected: selectedFilter == filter) {
-                                selectedFilter = filter
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 8)
-                
-                if filteredPrograms.isEmpty {
-                    VStack(spacing: 20) {
-                        Image(systemName: "doc.text.magnifyingglass")
-                            .font(.system(size: 50))
-                            .foregroundColor(.gray)
-                        
-                        Text("No saved programs found")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        
-                        if !searchText.isEmpty {
-                            Text("Try adjusting your search")
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
-                        }
-                    }
-                    .frame(maxHeight: .infinity)
-                } else {
-                    List {
-                        ForEach(filteredPrograms) { program in
-                            SavedProgramRow(program: program)
-                                .onTapGesture {
-                                    selectedProgram = program
-                                    showingDetail = true
-                                }
-                        }
-                        .onDelete { indexSet in
-                            let programsToDelete = indexSet.map { filteredPrograms[$0] }
-                            for program in programsToDelete {
-                                savedProgramManager.deleteProgram(program)
-                            }
-                        }
-                    }
-                    .listStyle(PlainListStyle())
-                }
-            }
-            .navigationTitle("Saved Programs")
-            .sheet(isPresented: $showingDetail) {
-                if let program = selectedProgram {
-                    SavedProgramDetailView(program: program)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Filter Button
-struct FilterButton: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(isSelected ? .semibold : .regular)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.red : Color.gray.opacity(0.2))
-                .foregroundColor(isSelected ? .white : .gray)
-                .cornerRadius(20)
-        }
-    }
-}
-
-// MARK: - Saved Program Row
-struct SavedProgramRow: View {
-    let program: SavedProgram
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(program.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Spacer()
-                
-                Text(program.category.rawValue)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(12)
-            }
-            
-            Text(program.description)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-                .lineLimit(2)
-            
-            HStack {
-                Label(program.dateCreated.formatted(date: .abbreviated, time: .shortened),
-                      systemImage: "calendar")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                
-                Spacer()
-                
-                Label("\(program.weeks.count) weeks",
-                      systemImage: "clock")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding(.vertical, 8)
-    }
-}
-
-// MARK: - Saved Program Detail View
-struct SavedProgramDetailView: View {
-    let program: SavedProgram
-    @Environment(\.dismiss) private var dismiss
-    @State private var showingDeleteAlert = false
-    @State private var showingShareSheet = false
-    @ObservedObject private var savedProgramManager = SavedProgramManager.shared
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Program header
-                    programHeader
-                    
-                    // Program details
-                    programDetails
-                    
-                    // Program content
-                    programContent
-                }
-                .padding()
-            }
-            .navigationTitle("Program Details")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        Button(action: { showingShareSheet = true }) {
-                            Label("Share", systemImage: "square.and.arrow.up")
-                        }
-                        
-                        Button(role: .destructive, action: { showingDeleteAlert = true }) {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-            }
-            .alert("Delete Program", isPresented: $showingDeleteAlert) {
-                Button("Cancel", role: .cancel) { }
-                Button("Delete", role: .destructive) {
-                    savedProgramManager.deleteProgram(program)
-                    dismiss()
-                }
-            } message: {
-                Text("Are you sure you want to delete this program? This action cannot be undone.")
-            }
-            .sheet(isPresented: $showingShareSheet) {
-                ShareSheet(items: [program.description])
-            }
-        }
-    }
-    
-    private var programHeader: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(program.name)
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Text(program.description)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
-    }
-    
-    private var programDetails: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            DetailRow(title: "Category", value: program.category.rawValue)
-            DetailRow(title: "Created", value: program.dateCreated.formatted())
-            DetailRow(title: "Duration", value: "\(program.weeks.count) weeks")
-        }
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
-    }
-    
-    private var programContent: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Program Content")
-                .font(.headline)
-            
-            ForEach(program.weeks.indices, id: \.self) { index in
-                let week = program.weeks[index]
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Week \(index + 1)")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    
-                    Text(week)
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.gray.opacity(0.1))
-                .cornerRadius(12)
-            }
-        }
-    }
-}
-
-// MARK: - Detail Row
-struct DetailRow: View {
-    let title: String
-    let value: String
-    
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            Spacer()
-            
-            Text(value)
-                .font(.subheadline)
-        }
-    }
-}
-
-// MARK: - Share Sheet
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Search Bar

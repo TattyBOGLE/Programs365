@@ -72,9 +72,30 @@ struct AchievementsView: View {
     private func loadAchievements() {
         // Sample data - replace with actual data loading
         achievements = [
-            Achievement(title: "Triple Jump Master", description: "Completed 100 triple jump training sessions", date: Date(), type: .milestone),
-            Achievement(title: "Gold Medal", description: "National Championships - Triple Jump", date: Date(), type: .competition),
-            Achievement(title: "Personal Best", description: "New PB in Triple Jump: 16.85m", date: Date(), type: .record)
+            Achievement(
+                title: "Triple Jump Master",
+                date: "Mar 15, 2024",
+                icon: "trophy.fill",
+                description: "Completed 100 triple jump training sessions",
+                category: "Milestone",
+                progress: 1.0
+            ),
+            Achievement(
+                title: "Gold Medal",
+                date: "Mar 10, 2024",
+                icon: "medal.fill",
+                description: "National Championships - Triple Jump",
+                category: "Competition",
+                progress: 1.0
+            ),
+            Achievement(
+                title: "Personal Best",
+                date: "Mar 5, 2024",
+                icon: "star.fill",
+                description: "New PB in Triple Jump: 16.85m",
+                category: "Record",
+                progress: 1.0
+            )
         ]
     }
 }
@@ -129,38 +150,6 @@ struct RecordCard: View {
     }
 }
 
-struct AchievementCard: View {
-    let achievement: Achievement
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: achievement.type.iconName)
-                .font(.system(size: 30))
-                .foregroundColor(achievement.type.color)
-                .frame(width: 60, height: 60)
-                .background(Color.gray.opacity(0.2))
-                .cornerRadius(30)
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(achievement.title)
-                    .font(.headline)
-                    .foregroundColor(.white)
-                Text(achievement.description)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
-                Text(achievement.formattedDate)
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            
-            Spacer()
-        }
-        .padding()
-        .background(Color.gray.opacity(0.2))
-        .cornerRadius(12)
-    }
-}
-
 // Models
 enum MedalType: String {
     case gold = "Gold"
@@ -180,46 +169,6 @@ enum MedalType: String {
     }
 }
 
-struct Achievement: Identifiable {
-    let id = UUID()
-    let title: String
-    let description: String
-    let date: Date
-    let type: AchievementType
-    
-    var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: date)
-    }
-}
-
-enum AchievementType {
-    case milestone
-    case competition
-    case record
-    
-    var iconName: String {
-        switch self {
-        case .milestone: return "star.fill"
-        case .competition: return "trophy.fill"
-        case .record: return "chart.line.uptrend.xyaxis"
-        }
-    }
-    
-    var color: Color {
-        switch self {
-        case .milestone: return .yellow
-        case .competition: return .red
-        case .record: return .blue
-        }
-    }
-}
-
-struct AchievementsView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            AchievementsView()
-        }
-    }
+#Preview {
+    AchievementsView()
 } 
