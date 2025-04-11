@@ -69,7 +69,7 @@ struct InjuryRehabilitationView: View {
                     // Categories Grid
                     LazyVGrid(columns: [GridItem(.flexible())], spacing: 16) {
                         ForEach(categories) { category in
-                            NavigationLink(destination: InjuryDetailView(category: category)) {
+                            NavigationLink(destination: InjuryDetailView()) {
                                 InjuryCategoryCard(category: category)
                             }
                         }

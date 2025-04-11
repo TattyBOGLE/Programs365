@@ -57,6 +57,13 @@ public class EnhancedProgramService: ObservableObject {
         Environmental Factors:
         - Training Environment: \(parameters.environment.rawValue)
         - Weather Conditions: \(parameters.weather.rawValue)
+        
+        Format the program as follows:
+        1. Use MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY as day headers in all caps
+        2. List the workout details under each day
+        3. Include rest and recovery recommendations
+        4. Add technical focus points
+        5. Specify key performance indicators
         """
         
         if !parameters.facilityLimitations.isEmpty {

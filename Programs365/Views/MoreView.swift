@@ -6,6 +6,7 @@ struct MoreViewNew: View {
     @State private var showingProfile = false
     @State private var showingSavedPrograms = false
     @State private var showingInjuryAnalysis = false
+    @State private var showingInjury = false
     @State private var showingProgress = false
     @State private var showingNutritionPlans = false
     @State private var showingAchievements = false
@@ -30,6 +31,26 @@ struct MoreViewNew: View {
                         .foregroundColor(.gray)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal)
+                    
+                    // Injury Analysis Section
+                    NavigationLink(destination: InjuryAnalysisView()) {
+                        MoreOptionCardNew(
+                            title: "Injury Analysis".localized,
+                            subtitle: "Analyze and track injuries".localized,
+                            icon: "bandage.fill",
+                            iconColor: .red
+                        )
+                    }
+                    
+                    // Injury Section
+                    NavigationLink(destination: InjuryView()) {
+                        MoreOptionCardNew(
+                            title: "Injury".localized,
+                            subtitle: "Manage and track injuries".localized,
+                            icon: "cross.case.fill",
+                            iconColor: .red
+                        )
+                    }
                     
                     // Profile Section
                     NavigationLink(destination: MoreProfileView()) {
@@ -70,16 +91,6 @@ struct MoreViewNew: View {
                             subtitle: "Access UK athletics rankings and statistics",
                             icon: "chart.bar.fill",
                             iconColor: .purple
-                        )
-                    }
-                    
-                    // Injury Analysis Section
-                    NavigationLink(destination: MoreInjuryAnalysisView()) {
-                        MoreOptionCardNew(
-                            title: "Injury Analysis".localized,
-                            subtitle: "Analyze and track injuries".localized,
-                            icon: "bandage.fill",
-                            iconColor: .red
                         )
                     }
                     
@@ -262,318 +273,6 @@ struct MoreProfileView: View {
     }
 }
 
-struct MoreInjuryAnalysisView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedBodyPart = "Knee"
-    @State private var injuryDescription = ""
-    @State private var painLevel = 5.0
-    @State private var showingAnalysis = false
-    @State private var showingImagePicker = false
-    @State private var showingCamera = false
-    @State private var selectedImage: UIImage?
-    @State private var isAnalyzingImage = false
-    @State private var imageSource: UIImagePickerController.SourceType = .camera
-    
-    let bodyParts = ["Ankle", "Knee", "Hip", "Back", "Shoulder", "Elbow", "Wrist", "Other"]
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section(header: Text("Injury Details")) {
-                    Picker("Body Part", selection: $selectedBodyPart) {
-                        ForEach(bodyParts, id: \.self) { part in
-                            Text(part).tag(part)
-                        }
-                    }
-                    
-                    TextEditor(text: $injuryDescription)
-                        .frame(height: 100)
-                        .overlay(
-                            Group {
-                                if injuryDescription.isEmpty {
-                                    Text("Describe your injury...")
-                                        .foregroundColor(.gray)
-                                        .padding(.leading, 5)
-                                        .padding(.top, 8)
-                                }
-                            },
-                            alignment: .topLeading
-                        )
-                    
-                    VStack(alignment: .leading) {
-                        Text("Pain Level: \(Int(painLevel))")
-                        Slider(value: $painLevel, in: 1...10, step: 1)
-                    }
-                }
-                
-                Section(header: Text("Injury Image")) {
-                    if let image = selectedImage {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 200)
-                            .cornerRadius(10)
-                            .padding(.vertical, 5)
-                    } else {
-                        Text("No image selected")
-                            .foregroundColor(.gray)
-                            .padding(.vertical, 5)
-                    }
-                    
-                    HStack {
-                        Button(action: {
-                            imageSource = .camera
-                            showingCamera = true
-                        }) {
-                            HStack {
-                                Image(systemName: "camera.fill")
-                                Text("Take Photo")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                        }
-                        
-                        Button(action: {
-                            imageSource = .photoLibrary
-                            showingImagePicker = true
-                        }) {
-                            HStack {
-                                Image(systemName: "photo.on.rectangle")
-                                Text("Upload")
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                        }
-                    }
-                }
-                
-                Section {
-                    Button(action: {
-                        if selectedImage != nil {
-                            isAnalyzingImage = true
-                            // Simulate image analysis
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                isAnalyzingImage = false
-                                showingAnalysis = true
-                            }
-                        } else {
-                            showingAnalysis = true
-                        }
-                    }) {
-                        HStack {
-                            if isAnalyzingImage {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .padding(.trailing, 5)
-                                Text("Analyzing Image...")
-                            } else {
-                                Text("Analyze Injury")
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(.white)
-                    }
-                    .listRowBackground(Color.blue)
-                    .disabled(isAnalyzingImage)
-                }
-            }
-            .navigationTitle("Injury Analysis")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-            .sheet(isPresented: $showingAnalysis) {
-                InjuryAnalysisResultView(
-                    bodyPart: selectedBodyPart, 
-                    description: injuryDescription, 
-                    painLevel: Int(painLevel),
-                    hasImage: selectedImage != nil
-                )
-            }
-            .sheet(isPresented: $showingImagePicker) {
-                MoreImagePicker(selectedImage: $selectedImage, sourceType: imageSource)
-            }
-            .sheet(isPresented: $showingCamera) {
-                MoreImagePicker(selectedImage: $selectedImage, sourceType: .camera)
-            }
-        }
-        .background(Color.black)
-    }
-}
-
-struct MoreImagePicker: UIViewControllerRepresentable {
-    @Binding var selectedImage: UIImage?
-    var sourceType: UIImagePickerController.SourceType
-    @Environment(\.presentationMode) private var presentationMode
-    
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = sourceType
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let parent: MoreImagePicker
-        
-        init(_ parent: MoreImagePicker) {
-            self.parent = parent
-        }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.selectedImage = image
-            }
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-        
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-    }
-}
-
-struct InjuryAnalysisResultView: View {
-    @Environment(\.dismiss) private var dismiss
-    let bodyPart: String
-    let description: String
-    let painLevel: Int
-    let hasImage: Bool
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Analysis Results")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .padding(.bottom)
-                    
-                    if hasImage {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Image Analysis")
-                                .font(.headline)
-                            
-                            Text("Based on the image you provided, we've detected:")
-                                .padding(.bottom, 5)
-                            
-                            VStack(alignment: .leading, spacing: 8) {
-                                ImageAnalysisItem(text: "Visible swelling in the \(bodyPart.lowercased()) area")
-                                ImageAnalysisItem(text: "Possible inflammation")
-                                ImageAnalysisItem(text: "Color changes indicating trauma")
-                            }
-                            .padding()
-                            .background(Color.black.opacity(0.3))
-                            .cornerRadius(10)
-                        }
-                        .padding(.bottom)
-                    }
-                    
-                    Text("Based on your description of \(bodyPart.lowercased()) pain at level \(painLevel), here's our assessment:")
-                        .padding(.bottom)
-                    
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Potential Conditions:")
-                            .font(.headline)
-                        
-                        Text("• \(getPotentialCondition())")
-                        Text("• \(getPotentialCondition())")
-                        Text("• \(getPotentialCondition())")
-                    }
-                    .padding()
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(10)
-                    
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Recommended Actions:")
-                            .font(.headline)
-                        
-                        Text("• Rest the affected area for \(getRestDays()) days")
-                        Text("• Apply ice for 15-20 minutes every 2-3 hours")
-                        Text("• Consider over-the-counter pain relievers")
-                        Text("• Schedule a consultation with a specialist if pain persists")
-                    }
-                    .padding()
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(10)
-                    
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Text("Close")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .padding(.top)
-                }
-                .padding()
-            }
-            .navigationTitle("Analysis Results")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-        .background(Color.black)
-    }
-    
-    private func getPotentialCondition() -> String {
-        let conditions = [
-            "Strain or sprain",
-            "Tendinitis",
-            "Bursitis",
-            "Stress fracture",
-            "Arthritis",
-            "Ligament injury",
-            "Muscle tear",
-            "Nerve compression"
-        ]
-        return conditions.randomElement() ?? "Unknown condition"
-    }
-    
-    private func getRestDays() -> Int {
-        return Int.random(in: 3...14)
-    }
-}
-
-struct ImageAnalysisItem: View {
-    let text: String
-    
-    var body: some View {
-        HStack(alignment: .top) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
-                .padding(.trailing, 5)
-            
-            Text(text)
-                .foregroundColor(.white)
-        }
-    }
-}
-
 struct MoreProgressView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTimeFrame = "Month"
@@ -629,9 +328,24 @@ struct MoreProgressView: View {
                 
                 // Stats
                 HStack(spacing: 20) {
-                    StatCard(title: "Total", value: "\(Int.random(in: 100...500))", unit: selectedMetric == "Distance" ? "km" : "min")
-                    StatCard(title: "Average", value: "\(Int.random(in: 10...50))", unit: selectedMetric == "Distance" ? "km" : "min")
-                    StatCard(title: "Best", value: "\(Int.random(in: 50...100))", unit: selectedMetric == "Distance" ? "km" : "min")
+                    StatCard(
+                        title: "Total",
+                        value: "\(Int.random(in: 100...500))",
+                        icon: "chart.bar.fill",
+                        color: .red
+                    )
+                    StatCard(
+                        title: "Average",
+                        value: "\(Int.random(in: 10...50))",
+                        icon: "chart.line.uptrend.xyaxis",
+                        color: .blue
+                    )
+                    StatCard(
+                        title: "Best",
+                        value: "\(Int.random(in: 50...100))",
+                        icon: "trophy.fill",
+                        color: .yellow
+                    )
                 }
                 .padding()
                 
@@ -648,33 +362,6 @@ struct MoreProgressView: View {
             }
         }
         .background(Color.black)
-    }
-}
-
-struct StatCard: View {
-    let title: String
-    let value: String
-    let unit: String
-    
-    var body: some View {
-        VStack {
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-            
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text(unit)
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.black.opacity(0.3))
-        .cornerRadius(10)
     }
 }
 
@@ -1891,7 +1578,58 @@ struct CoachesCornerView: View {
         Coach(name: "Aston Moore MBE", specialty: "Multi-events", achievement: "Lifetime Achievement Award 2024", notableAthletes: "Katarina Johnson-Thompson"),
         Coach(name: "Trevor Painter", specialty: "Middle-distance", achievement: "High Performance Coach of the Year 2024", notableAthletes: "Keely Hodgkinson"),
         Coach(name: "Paul Moseley", specialty: "Para-athletics", achievement: "Great Coaching Moment 2024", notableAthletes: "Hannah Cockroft"),
-        Coach(name: "Christian Malcolm", specialty: "Sprints", achievement: "Head Coach British Athletics Olympic Programme", notableAthletes: "")
+        Coach(name: "Christian Malcolm", specialty: "Sprints", achievement: "Head Coach British Athletics Olympic Programme", notableAthletes: ""),
+        Coach(name: "Steve Cram", specialty: "Middle-distance", achievement: "Former World Record Holder", notableAthletes: "Laura Muir"),
+        Coach(name: "Laura Weightman", specialty: "Distance", achievement: "Former Olympian", notableAthletes: "Laura Muir"),
+        Coach(name: "Jenny Archer MBE", specialty: "Wheelchair Racing", achievement: "Multiple Paralympic Medals", notableAthletes: "David Weir"),
+        Coach(name: "Tony Jarrett", specialty: "Sprint Hurdles", achievement: "GB Sprint Hurdles Development Coach", notableAthletes: ""),
+        Coach(name: "Malcolm Arnold OBE", specialty: "Hurdles", achievement: "Legendary Coach", notableAthletes: "Colin Jackson"),
+        Coach(name: "Paula Dunn MBE", specialty: "Para-athletics", achievement: "Former Paralympic Head Coach", notableAthletes: ""),
+        Coach(name: "Christine Harrison-Bloomfield", specialty: "Leadership", achievement: "UK Sport Female Leadership Program", notableAthletes: ""),
+        Coach(name: "Shani Palmer", specialty: "Leadership", achievement: "UK Sport Female Leadership Program", notableAthletes: ""),
+        Coach(name: "Coral Nourrice", specialty: "Leadership", achievement: "UK Sport Female Leadership Program", notableAthletes: ""),
+        Coach(name: "John Anderson", specialty: "Multi-discipline", achievement: "TV Personality & Coach", notableAthletes: ""),
+        Coach(name: "Jamie Bowie", specialty: "Track & Field", achievement: "Scottish Coach", notableAthletes: ""),
+        Coach(name: "Jim Bradley", specialty: "Sprinting", achievement: "Renowned Coach", notableAthletes: ""),
+        Coach(name: "Andy Coogan", specialty: "Middle-distance", achievement: "Author & Coach", notableAthletes: ""),
+        Coach(name: "Bill Foster", specialty: "Endurance", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Alex Currie", specialty: "Sprints & Hurdles", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Matt Ashley", specialty: "High Jump", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Grant Barker", specialty: "Sprints", achievement: "Experienced Coach", notableAthletes: ""),
+        Coach(name: "John Davies", specialty: "Sprints", achievement: "Experienced Coach", notableAthletes: ""),
+        Coach(name: "Ashley Bryant", specialty: "Multi-events", achievement: "Loughborough University Coach", notableAthletes: ""),
+        Coach(name: "Andy Carrott", specialty: "Sprints", achievement: "Former Olympian", notableAthletes: ""),
+        Coach(name: "Ailsa Wallace", specialty: "High Jump", achievement: "Oxford University Coach", notableAthletes: ""),
+        Coach(name: "Kay Reynolds", specialty: "Sprints & Hurdles", achievement: "Oxford University Coach", notableAthletes: ""),
+        Coach(name: "Richard Kilty", specialty: "Sprints", achievement: "Former World Champion", notableAthletes: "Louie Hinchliffe"),
+        Coach(name: "Keith Hunter", specialty: "Jumps & Speed", achievement: "European Gold & Para World Bronze Coach", notableAthletes: "European Gold Medalist, Para World Bronze Champion"),
+        Coach(name: "Clare Buckle", specialty: "Para Jumps", achievement: "GB Para Jumps Coach", notableAthletes: ""),
+        Coach(name: "Leon Baptiste", specialty: "Sprints & Relays", achievement: "Commonwealth Games Gold", notableAthletes: ""),
+        Coach(name: "Ryan Freckleton", specialty: "Sprints", achievement: "GB Junior & Senior Coach", notableAthletes: ""),
+        Coach(name: "Stefano Cugnetto", specialty: "400m & Relays", achievement: "GB Squad Coach", notableAthletes: ""),
+        Coach(name: "Paul Wilson", specialty: "Javelin", achievement: "GB Lead Coach", notableAthletes: ""),
+        Coach(name: "Alison O'Riordan", specialty: "Throws", achievement: "GB Para & Able-bodied Coach", notableAthletes: ""),
+        Coach(name: "Mike Holmes", specialty: "Combined Events", achievement: "GB Coach", notableAthletes: ""),
+        Coach(name: "Zane Duquemin", specialty: "Discus & Shot Put", achievement: "GB Coach", notableAthletes: ""),
+        Coach(name: "Tom Craggs", specialty: "Endurance", achievement: "British Endurance Coach", notableAthletes: ""),
+        Coach(name: "Charlotte Fisher", specialty: "Marathon", achievement: "GB Marathon Coach", notableAthletes: ""),
+        Coach(name: "Andy Bibby", specialty: "Para Endurance", achievement: "National Level Coach", notableAthletes: ""),
+        Coach(name: "Jim Edwards", specialty: "Seated Throws", achievement: "GB Specialist Coach", notableAthletes: ""),
+        Coach(name: "David Turner", specialty: "Para Throws", achievement: "Former National Coach", notableAthletes: ""),
+        Coach(name: "Sam Ruddock", specialty: "Throws", achievement: "Former GB Para Athlete", notableAthletes: ""),
+        Coach(name: "Ian Thompson", specialty: "Wheelchair Racing", achievement: "Former GB Coach", notableAthletes: ""),
+        Coach(name: "Tanni Grey-Thompson", specialty: "Wheelchair Racing", achievement: "Paralympic Champion", notableAthletes: ""),
+        Coach(name: "Benke Blomkvist", specialty: "Sprints & Hurdles", achievement: "Former UKA Coach", notableAthletes: ""),
+        Coach(name: "Steve Fudge", specialty: "Sprints", achievement: "Former GB Coach", notableAthletes: ""),
+        // New coaches
+        Coach(name: "Aston Moore", specialty: "Jumps", achievement: "GB Lead Jumps Coach", notableAthletes: ""),
+        Coach(name: "Fuzz Ahmed", specialty: "High Jump", achievement: "GB High Jump Coach", notableAthletes: ""),
+        Coach(name: "Scott Simpson", specialty: "Pole Vault", achievement: "GB Pole Vault Coach", notableAthletes: ""),
+        Coach(name: "Keith Hunter", specialty: "Jumps & Speed", achievement: "GB Jumps & Speed Coach", notableAthletes: "European Gold Medalist, Para World Champion"),
+        Coach(name: "Femi Akinsanya", specialty: "Triple Jump", achievement: "Director of Athletics at Loughborough University", notableAthletes: "Phillips Idowu, Laura Sugar"),
+        Coach(name: "Guy Spencer", specialty: "Long & Triple Jump", achievement: "UK-based Horizontal Jumps Coach", notableAthletes: ""),
+        Coach(name: "Keith Fleming", specialty: "Long Jump", achievement: "Former GB International", notableAthletes: "Commonwealth Games Gold & Silver Medalists"),
+        Coach(name: "Kevin Reeve", specialty: "Horizontal Jumps", achievement: "UKA Level 4 Coach", notableAthletes: "Long Jump Coach at Birchfield Harriers")
     ]
     
     private var heroGradient: LinearGradient {
@@ -1977,12 +1715,48 @@ struct CoachesCornerView: View {
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
+            Text("Essential tools and guides for coaches")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
-                    ForEach(1...5, id: \.self) { index in
-                        ResourceCard()
-                    }
+                    ResourceCard(
+                        title: "Coaching Fundamentals",
+                        description: "Learn the essential principles of athletic coaching and development strategies.",
+                        type: "Guide",
+                        icon: "book.fill"
+                    )
+                    
+                    ResourceCard(
+                        title: "Training Program Builder",
+                        description: "Create customized training programs for different age groups and skill levels.",
+                        type: "Tool",
+                        icon: "square.stack.3d.up.fill"
+                    )
+                    
+                    ResourceCard(
+                        title: "Performance Analysis",
+                        description: "Advanced techniques for analyzing athlete performance and providing feedback.",
+                        type: "Workshop",
+                        icon: "chart.bar.fill"
+                    )
+                    
+                    ResourceCard(
+                        title: "Injury Prevention",
+                        description: "Guidelines for preventing common athletic injuries and promoting safe training.",
+                        type: "Guide",
+                        icon: "heart.text.square.fill"
+                    )
+                    
+                    ResourceCard(
+                        title: "Competition Preparation",
+                        description: "Strategies for preparing athletes for competitions at all levels.",
+                        type: "Course",
+                        icon: "trophy.fill"
+                    )
                 }
+                .padding(.horizontal)
             }
         }
         .padding()
@@ -2035,14 +1809,109 @@ struct CoachCard: View {
 }
 
 struct ResourceCard: View {
+    let title: String
+    let description: String
+    let type: String
+    let icon: String
+    
     var body: some View {
-        // Implementation of ResourceCard
-        Text("Resource Card")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(.red)
+                
+                Spacer()
+                
+                Text(type)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(8)
+            }
+            
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.white)
+                .lineLimit(2)
+            
+            Text(description)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .lineLimit(3)
+        }
+        .padding()
+        .frame(width: 280)
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
 struct CoachesCornerView_Previews: PreviewProvider {
     static var previews: some View {
         CoachesCornerView()
+    }
+}
+
+struct AddNewInjuryView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var activeInjuries: Int
+    @State private var selectedBodyPart = ""
+    @State private var injuryType = ""
+    @State private var severity = "Mild"
+    @State private var date = Date()
+    @State private var notes = ""
+    
+    let severityLevels = ["Mild", "Moderate", "Severe"]
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Injury Details")) {
+                    TextField("Body Part", text: $selectedBodyPart)
+                    TextField("Injury Type", text: $injuryType)
+                    
+                    Picker("Severity", selection: $severity) {
+                        ForEach(severityLevels, id: \.self) { level in
+                            Text(level).tag(level)
+                        }
+                    }
+                    
+                    DatePicker("Date", selection: $date, displayedComponents: .date)
+                }
+                
+                Section(header: Text("Notes")) {
+                    TextEditor(text: $notes)
+                        .frame(height: 100)
+                }
+            }
+            .navigationTitle("New Injury")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveInjury()
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func saveInjury() {
+        activeInjuries += 1
+        // Save injury details to storage
     }
 } 

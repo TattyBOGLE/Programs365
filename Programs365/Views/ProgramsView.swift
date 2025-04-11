@@ -5,31 +5,44 @@ import UIKit
 // MARK: - Views
 struct AgeGroupCard: View {
     let ageGroup: AgeGroup
+    let eventCount: Int
+    let isSelected: Bool
+    let action: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(ageGroup.rawValue)
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text("\(ageGroup.allowedEvents.count) Available Events")
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            Spacer()
-            
-            HStack {
-                Text("View Events")
-                    .foregroundColor(.red)
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.red)
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(ageGroup.rawValue)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Text("\(eventCount) Available Events")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                HStack {
+                    Text("View Events")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.red)
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
             }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .frame(height: 120)
+            .background(isSelected ? Color.red.opacity(0.1) : Color(UIColor.systemGray6))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? Color.red : Color.clear, lineWidth: 2)
+            )
         }
-        .frame(height: 160)
-        .padding(20)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(16)
     }
 }
 
@@ -56,20 +69,22 @@ struct EventCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: categoryIcon)
                     .font(.system(size: 24))
                     .foregroundColor(.red)
                 
-            Text(event.category)
-                .font(.subheadline)
-                .foregroundColor(.red)
+                Text(event.category)
+                    .font(.subheadline)
+                    .foregroundColor(.red)
             }
             
             Text(event.rawValue)
-                .font(.system(size: 32, weight: .bold))
+                .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             
             Spacer()
             
@@ -80,7 +95,7 @@ struct EventCard: View {
                     .foregroundColor(.red)
             }
         }
-        .frame(height: 180)
+        .frame(height: 160)
         .padding(20)
         .background(Color(UIColor.systemGray6))
         .cornerRadius(16)
@@ -217,6 +232,7 @@ struct WeeksList: View {
     let event: String
     let chatGPTService: ChatGPTService
     @StateObject private var enhancedProgramService = EnhancedProgramService(chatGPTService: ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey))
+    @ObservedObject private var programManager = SavedProgramManager.shared
     
     @State private var selectedWeek: Int?
     @State private var showingProgramSheet = false
@@ -229,6 +245,10 @@ struct WeeksList: View {
     @State private var selectedTerm: TrainingTerm?
     @State private var selectedPeriod: TrainingPeriod?
     @State private var selectedGender: Gender = .male
+    @State private var showingSaveDialog = false
+    @State private var programTitle = ""
+    @State private var programNotes = ""
+    @State private var showingSaveSuccess = false
     
     var body: some View {
         ScrollView {
@@ -261,10 +281,41 @@ struct WeeksList: View {
                     .toolbar {
                         ToolbarItem(placement: .navigationBarTrailing) {
                             Button("Save") {
-                                // Save program logic here
+                                programTitle = "\(event) Week \(selectedWeek ?? 0) Program"
+                                showingSaveDialog = true
                             }
                         }
                     }
+            }
+        }
+        .sheet(isPresented: $showingSaveDialog) {
+            SaveProgramView(
+                programName: $programTitle,
+                selectedCategory: .constant(SavedProgram.ProgramCategory(rawValue: event) ?? .custom),
+                onSave: {
+                    let savedProgram = SavedProgram(
+                        name: programTitle,
+                        description: "\(ageGroup) - \(term) - \(period) - Week \(selectedWeek ?? 0)",
+                        category: SavedProgram.ProgramCategory(rawValue: event) ?? .custom,
+                        weeks: [generatedProgram],
+                        dateCreated: Date()
+                    )
+                    programManager.saveProgram(savedProgram)
+                    showingSaveDialog = false
+                    showingSaveSuccess = true
+                    
+                    // Dismiss success message after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        showingSaveSuccess = false
+                    }
+                }
+            )
+        }
+        .overlay {
+            if showingSaveSuccess {
+                SaveSuccessView()
+                    .transition(.scale.combined(with: .opacity))
+                    .animation(.easeInOut, value: showingSaveSuccess)
             }
         }
         .onAppear {
@@ -353,6 +404,7 @@ struct WeekCard: View {
             HStack {
                 Text("View Program")
                     .foregroundColor(.blue)
+                Spacer()
                 Image(systemName: "chevron.right")
                     .foregroundColor(.blue)
             }
@@ -376,199 +428,310 @@ struct WeekIdentifier: Identifiable {
 
 struct ProgramsView: View {
     @StateObject private var chatGPTService = ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey)
-    @StateObject private var enhancedProgramService = EnhancedProgramService(chatGPTService: ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey))
-    @ObservedObject private var programManager = SavedProgramManager.shared
+    @StateObject private var enhancedProgramService: EnhancedProgramService
+    @StateObject private var programManager = SavedProgramManager.shared
     @State private var selectedAgeGroup: AgeGroup?
     @State private var selectedEvent: TrackEvent?
     @State private var selectedTerm: TrainingTerm?
     @State private var selectedPeriod: TrainingPeriod?
+    @State private var selectedGender: Gender = .male
     @State private var generatedProgram: String?
-    @State private var programTitle: String = ""
-    @State private var error: Error?
-    @State private var isLoading = false
+    @State private var showingSaveDialog = false
+    @State private var programTitle = ""
+    @State private var selectedCategory: String?
+    @State private var searchText = ""
     @State private var showingEventSelection = false
     @State private var showingTermSelection = false
     @State private var showingProgramSheet = false
-    @State private var showingEnhancedParameters = false
-    @State private var showingSaveDialog = false
-    @State private var showError = false
-    @State private var selectedGender: Gender = .male
-    @State private var enhancedParameters = EnhancedProgramParameters(
-        ageGroup: .u16,
-        event: .sprints100m,
-        term: .shortTerm,
-        period: .specific,
-        gender: .male
-    )
     
-    private var heroGradient: LinearGradient {
-        LinearGradient(
-            gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-            startPoint: .top,
-            endPoint: .bottom
-        )
-    }
+    let initialCategory: String?
     
-    private var heroTitleView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Training Programs")
-                .font(.system(size: 40, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text("Personalized training plans for every athlete")
-                .font(.title3)
-                .foregroundColor(.white.opacity(0.9))
-        }
-        .padding()
-    }
-    
-    private var heroBannerView: some View {
-        ZStack(alignment: .bottomLeading) {
-            Image("track_hero_banner")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(height: 250)
-                .clipped()
-                .overlay(heroGradient)
-            
-            heroTitleView
-        }
-    }
-    
-    init() {
+    init(initialCategory: String? = nil) {
+        self.initialCategory = initialCategory
         let chatGPTService = ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey)
-        _chatGPTService = StateObject(wrappedValue: chatGPTService)
         _enhancedProgramService = StateObject(wrappedValue: EnhancedProgramService(chatGPTService: chatGPTService))
-    }
-    
-    var filteredEvents: [TrackEvent] {
-        guard let ageGroup = selectedAgeGroup else { return [] }
-        
-        let ageGroupEvents = ageGroup.allowedEvents
-        
-        return ageGroupEvents.filter { event in
-            if selectedGender == .male {
-                return !event.isFemaleOnly
-            } else {
-                return !event.isMaleOnly
-            }
-        }
     }
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 0) {
-                    heroBannerView
+                VStack(spacing: 24) {
+                    // Search Bar
+                    SearchBar(text: $searchText)
+                        .padding(.horizontal)
+                    
+                    // Hero Section
+                    heroSection
+                    
+                    // Quick Access Section
+                    quickAccessSection
                     
                     // Age Groups Section
-                    VStack(spacing: 20) {
-                        Text("Select Age Group")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                            .padding(.top)
-                        
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                            ForEach(AgeGroup.allCases, id: \.self) { ageGroup in
-                                NavigationLink(destination: EventsView(ageGroup: ageGroup)) {
-                                    AgeGroupCard(ageGroup: ageGroup)
-                                }
-                            }
+                    ageGroupsSection
+                    
+                    // Saved Programs Section
+                    savedProgramsSection
+                }
+                .padding(.vertical)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .background(Color(UIColor.systemBackground))
+            .sheet(isPresented: $showingEventSelection) {
+                if let ageGroup = selectedAgeGroup {
+                    EventsView(ageGroup: ageGroup, initialCategory: initialCategory)
+                }
+            }
+        }
+    }
+    
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(getHeroTitle())
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.primary)
+            
+            Text("Customized programs for your athletic goals")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal)
+    }
+    
+    private var quickAccessSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Quick Access")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    QuickAccessCard(
+                        title: "Track Events",
+                        icon: "figure.run",
+                        color: .red
+                    ) {
+                        // Navigate to track events
+                    }
+                    
+                    QuickAccessCard(
+                        title: "Field Events",
+                        icon: "figure.disc.sports",
+                        color: .blue
+                    ) {
+                        // Navigate to field events
+                    }
+                    
+                    QuickAccessCard(
+                        title: "Para Athletics",
+                        icon: "figure.roll",
+                        color: .green
+                    ) {
+                        // Navigate to para athletics
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+    
+    private var ageGroupsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Age Groups")
+                .font(.title3)
+                .fontWeight(.semibold)
+                .padding(.horizontal)
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 16),
+                GridItem(.flexible(), spacing: 16)
+            ], spacing: 16) {
+                ForEach(AgeGroup.allCases, id: \.self) { ageGroup in
+                    Button(action: {
+                        selectedAgeGroup = ageGroup
+                        showingEventSelection = true
+                    }) {
+                        AgeGroupCard(
+                            ageGroup: ageGroup,
+                            eventCount: getEventCount(for: ageGroup),
+                            isSelected: selectedAgeGroup == ageGroup
+                        ) {
+                            selectedAgeGroup = ageGroup
+                            showingEventSelection = true
                         }
-                        .padding(.horizontal)
                     }
                 }
             }
-            .background(Color.black.edgesIgnoringSafeArea(.all))
-            .navigationBarHidden(true)
+            .padding(.horizontal)
         }
     }
     
-    private func generateProgram() {
-        isLoading = true
-        error = nil
-        generatedProgram = nil
-        
-        guard let ageGroup = selectedAgeGroup,
-              let event = selectedEvent,
-              let term = selectedTerm,
-              let period = selectedPeriod else {
-            error = NSError(domain: "ProgramsView", code: 1, userInfo: [NSLocalizedDescriptionKey: "Please select all required options"])
-            isLoading = false
-            return
-        }
-        
-        Task {
-            do {
-                let prompt = """
-                Generate a detailed training program for:
-                Age Group: \(ageGroup.rawValue)
-                Event: \(event.rawValue)
-                Term: \(term.rawValue)
-                Period: \(period.rawValue)
+    private var savedProgramsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Saved Programs")
+                    .font(.title3)
+                    .fontWeight(.semibold)
                 
-                Include:
-                1. Weekly schedule
-                2. Specific drills and exercises
-                3. Intensity levels
-                4. Recovery protocols
-                5. Progressions
-                """
+                Spacer()
                 
-                let response = try await chatGPTService.generateResponse(prompt: prompt)
-                await MainActor.run {
-                    generatedProgram = response
-                    isLoading = false
-                    showingProgramSheet = true
+                NavigationLink(destination: SavedProgramsView()) {
+                    Text("View All")
+                        .font(.subheadline)
+                        .foregroundColor(.red)
                 }
-            } catch {
-                await MainActor.run {
-                    self.error = error
-                    isLoading = false
-                    showError = true
+            }
+            .padding(.horizontal)
+            
+            if programManager.savedPrograms.isEmpty {
+                emptyStateView
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(programManager.savedPrograms.prefix(3)) { program in
+                            SavedProgramPreviewCard(program: program)
+                        }
+                    }
+                    .padding(.horizontal)
                 }
             }
         }
     }
     
-    private func saveProgram() {
-        guard let program = generatedProgram else { return }
-        
-        let title = selectedEvent != nil ?
-            "\(selectedEvent!.rawValue) - \(selectedTerm?.rawValue ?? "")" :
-            "\(selectedEvent?.rawValue ?? "") - \(selectedTerm?.rawValue ?? "")"
-        
-        let description = selectedEvent != nil ?
-            "Custom program for \(selectedAgeGroup?.rawValue ?? "") athletes" :
-            "Program for \(selectedAgeGroup?.rawValue ?? "") athletes"
-        
-        let savedProgram = SavedProgram(
-            name: title,
-            description: description,
-            category: .custom,
-            weeks: [program]
-        )
-        
-        programManager.saveProgram(savedProgram)
-        showingSaveDialog = true
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 50))
+                .foregroundColor(.gray)
+            
+            Text("No saved programs yet")
+                .font(.headline)
+                .foregroundColor(.gray)
+            
+            Text("Start by creating a new training program")
+                .font(.subheadline)
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(12)
+        .padding(.horizontal)
+    }
+    
+    private func getEventCount(for ageGroup: AgeGroup) -> Int {
+        return ageGroup.allowedEvents.count
+    }
+    
+    private func getHeroTitle() -> String {
+        if let category = initialCategory {
+            return category
+        }
+        return "Training Programs"
+    }
+}
+
+// MARK: - Quick Access Card
+struct QuickAccessCard: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .foregroundColor(color)
+                
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+            }
+            .frame(width: 100, height: 100)
+            .background(Color(UIColor.systemGray6))
+            .cornerRadius(16)
+        }
+    }
+}
+
+// MARK: - Saved Program Preview Card
+struct SavedProgramPreviewCard: View {
+    let program: SavedProgram
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(program.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text(program.category.rawValue)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+            }
+            
+            Text(program.description)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+            
+            HStack {
+                Label(program.dateCreated.formatted(date: .abbreviated, time: .shortened),
+                      systemImage: "calendar")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Label("\(program.weeks.count) weeks",
+                      systemImage: "clock")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .frame(width: 280)
+        .background(Color(UIColor.systemGray6))
+        .cornerRadius(16)
     }
 }
 
 struct EventsView: View {
     let ageGroup: AgeGroup
+    let initialCategory: String?
     @State private var selectedGender: Gender = .male
     
     var filteredEvents: [TrackEvent] {
-        ageGroup.allowedEvents.filter { event in
+        let events = ageGroup.allowedEvents.filter { event in
             if selectedGender == .male {
                 return !event.isFemaleOnly
             } else {
                 return !event.isMaleOnly
             }
         }
+        
+        if let category = initialCategory {
+            switch category {
+            case "Track Events":
+                return events.filter { ["Sprints", "Middle Distance", "Long Distance", "Hurdles", "Relays"].contains($0.category) }
+            case "Field Events":
+                return events.filter { ["Jumps", "Throws"].contains($0.category) }
+            case "Para Athletics":
+                return events.filter { $0.category == "Para" }
+            default:
+                return events
+            }
+        }
+        return events
     }
     
     var body: some View {
@@ -668,26 +831,27 @@ struct EventSelectionView: View {
                 VStack(spacing: 0) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("England Athletics")
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
+                            .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("\(ageGroup.rawValue) Events")
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("Select your event for \(selectedGender.rawValue) athletes")
-                                .font(.title3)
+                            Text("Specialized training programs for para-athletes")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
@@ -774,26 +938,27 @@ struct TermSelectionView: View {
                 VStack(spacing: 0) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("England Athletics")
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
+                            .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(event.rawValue)
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("Select your training term duration")
-                                .font(.title3)
+                            Text("Specialized training programs for para-athletes")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
@@ -891,26 +1056,27 @@ struct PeriodSelectionView: View {
                 VStack(spacing: 0) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("England Athletics")
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
+                            .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(event.rawValue)
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("\(term.rawValue) - Select your training period")
-                                .font(.title3)
+                            Text("Specialized training programs for para-athletes")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
@@ -960,26 +1126,27 @@ struct ProgramSheetView: View {
                 VStack(spacing: 0) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("England Athletics")
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
+                            .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(event.rawValue)
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text(term.rawValue)
-                                .font(.title3)
+                            Text("Specialized training programs for para-athletes")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
@@ -1145,38 +1312,60 @@ struct ParaAthletesView: View {
                 if selectedAgeGroup == nil {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        // Background Image
-                        Image("wheelchair.hero")  // Using a wheelchair hero image
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
+                            .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        // Title and Description
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Paralympic Athletes")
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("Elite training programs for para-athletes")
-                                .font(.title3)
+                            Text("Select Age Group")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
                     }
                     
                     // Age Groups Grid
-                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
-                        ForEach(["U17", "U20", "Senior"], id: \.self) { age in
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        ForEach(["U18", "U20", "Senior"], id: \.self) { age in
                             Button(action: { selectedAgeGroup = age }) {
-                                ParaAgeGroupCard(title: age, description: getAgeDescription(age))
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Text(age)
+                                        .font(.title)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                    
+                                    Text(getAgeDescription(for: age))
+                                        .font(.subheadline)
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                    
+                                    Spacer()
+                                    
+                                    HStack {
+                                        Text("View Events")
+                                            .foregroundColor(.red)
+                                        Image(systemName: "chevron.right")
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                                .frame(height: 160)
+                                .padding(20)
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(16)
                             }
                         }
                     }
@@ -1234,34 +1423,28 @@ struct ParaAthletesView: View {
             }
             .background(Color.black.edgesIgnoringSafeArea(.all))
             .navigationTitle(getNavigationTitle())
-            .navigationBarItems(
-                leading: selectedAgeGroup != nil ? backButton : nil,
-                trailing: Button("Done") { dismiss() }
+            .navigationBarItems(leading: Button(action: handleBack) {
+                Image(systemName: "chevron.left")
                     .foregroundColor(.white)
-            )
+            })
         }
     }
     
-    private var backButton: some View {
-        Button(action: navigateBack) {
-            Image(systemName: "chevron.left")
-                .foregroundColor(.white)
-        }
-    }
-    
-    private func navigateBack() {
-        withAnimation {
-            if selectedPeriod != nil {
-                selectedPeriod = nil
-            } else if selectedTerm != nil {
-                selectedTerm = nil
-            } else if selectedClassification != nil {
-                selectedClassification = nil
-            } else if selectedEvent != nil {
-                selectedEvent = nil
-            } else if selectedAgeGroup != nil {
-                selectedAgeGroup = nil
-            }
+    private func handleBack() {
+        if selectedWeek != nil {
+            selectedWeek = nil
+        } else if selectedPeriod != nil {
+            selectedPeriod = nil
+        } else if selectedTerm != nil {
+            selectedTerm = nil
+        } else if selectedClassification != nil {
+            selectedClassification = nil
+        } else if selectedEvent != nil {
+            selectedEvent = nil
+        } else if selectedAgeGroup != nil {
+            selectedAgeGroup = nil
+        } else {
+            dismiss()
         }
     }
     
@@ -1277,17 +1460,17 @@ struct ParaAthletesView: View {
         } else if let age = selectedAgeGroup {
             return "\(age) Events"
         }
-        return "Paralympic Athletes"
+        return "Para Athletics"
     }
     
-    private func getAgeDescription(_ age: String) -> String {
+    private func getAgeDescription(for age: String) -> String {
         switch age {
-        case "U17":
-            return "Youth development programs for emerging para-athletes"
+        case "U18":
+            return "Athletes aged 16 or 17 on December 31 of the competition year"
         case "U20":
-            return "Advanced training for junior para-athletes"
+            return "Athletes aged 18 or 19 on December 31 of the competition year"
         case "Senior":
-            return "Elite programs for senior para-athletes"
+            return "Athletes aged 14+ for senior-level Para athletics events"
         default:
             return ""
         }
@@ -1771,26 +1954,27 @@ struct WeeksSelectionView: View {
                 VStack(spacing: 0) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("England Athletics")
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
+                            .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(event.rawValue)
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("\(term.rawValue) - \(period.rawValue)")
-                                .font(.title3)
+                            Text("Specialized training programs for para-athletes")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
@@ -1849,30 +2033,27 @@ struct ProgramDetailView: View {
                 VStack(spacing: 0) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("England Athletics")
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
+                            .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(event.rawValue)
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("\(term.rawValue) - \(period.rawValue)")
-                                .font(.title3)
-                                .foregroundColor(.white.opacity(0.9))
-                            
-                            Text("Weeks \(weeks.map { String($0) }.joined(separator: ", "))")
-                                .font(.title3)
+                            Text("Specialized training programs for para-athletes")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
@@ -2070,26 +2251,27 @@ struct TrainingContextSelectionView: View {
                 VStack(spacing: 24) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("hero.training")
+                        Image("wheelchair")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(height: 200)
                             .clipped()
                             .overlay(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.7)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
                                 )
                             )
                         
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Training Context")
-                                .font(.system(size: 40, weight: .bold))
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Para Athletics")
+                                .font(.title)
+                                .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("Select your training duration and period")
-                                .font(.title3)
+                            Text("Specialized training programs for para-athletes")
+                                .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()

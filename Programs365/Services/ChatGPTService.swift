@@ -180,19 +180,19 @@ public final class ChatGPTService: ObservableObject {
                 let lines = section.split(separator: "\n")
                 guard !lines.isEmpty else { continue }
                 
-                // Day header
+                // Day header - Make it bold and red
                 var header = AttributedString(lines[0])
-                header.foregroundColor = Color.red
-                header.font = Font.system(.title, design: .default).weight(.bold)
+                header.foregroundColor = .red
+                header.font = .system(.title, design: .default).weight(.bold)
                 result += header + "\n\n"
                 
                 // Focus line
                 if let focusLine = lines.first(where: { $0.hasPrefix("Focus:") }) {
                     print("ChatGPTService: Found Focus line: \(focusLine)")
                     var focus = AttributedString(focusLine)
-                    focus.foregroundColor = Color.white
-                    focus.font = Font.system(.headline, design: .default).weight(.medium)
-                    result += focus + "\n" // Single newline for reduced spacing
+                    focus.foregroundColor = .white
+                    focus.font = .system(.headline, design: .default).weight(.medium)
+                    result += focus + "\n"
                 }
                 
                 // Main content
@@ -817,46 +817,50 @@ public final class ChatGPTService: ObservableObject {
             MONDAY
             Focus: Speed and Power Development
             
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            • Light jogging
+            Warm-Up (40 minutes)
+            Dynamic Stretching (15 minutes):
+            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
+            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
+            • Walking Knee Hugs: 2 sets x 10 reps each leg
+            • Walking Quad Pulls: 2 sets x 10 reps each leg
+            • Walking High Knees: 2 sets x 20m
+            • Walking Butt Kicks: 2 sets x 20m
             
-            Sprint Drills (20 minutes)
-            • High knees
-            • A-skips
-            • B-skips
-            • Arm drive exercises
+            Mobility Exercises (15 minutes):
+            • Hip Circles: 2 sets x 10 reps each direction
+            • Ankle Mobility: 2 sets x 15 reps each foot
+            • Shoulder Mobility: 2 sets x 12 reps each arm
+            • Spine Mobility: 2 sets x 8 reps each direction
+            • Hip Openers: 2 sets x 10 reps each side
+            • Thoracic Bridge: 2 sets x 8 reps
             
-            Sprint Work (30 minutes)
-            • 4 x 30m accelerations
-            • 4 x 60m sprints at 80% effort
-            • 3 x 100m sprints at 90% effort
-            
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
+            Light Jogging (10 minutes):
+            • Easy pace jogging with dynamic movements
+            • Include high knees, butt kicks, and side shuffles
             
             TUESDAY
             Focus: Strength and Power
             
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
+            Warm-Up (40 minutes)
+            Dynamic Stretching (15 minutes):
+            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
+            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
+            • Walking Knee Hugs: 2 sets x 10 reps each leg
+            • Walking Quad Pulls: 2 sets x 10 reps each leg
+            • Walking High Knees: 2 sets x 20m
+            • Walking Butt Kicks: 2 sets x 20m
             
-            Strength Training (45 minutes)
-            • Squats: 4 sets x 6 reps
-            • Deadlifts: 4 sets x 5 reps
-            • Box jumps: 3 sets x 8 reps
-            • Medicine ball throws: 3 sets x 10 reps
+            Mobility Exercises (15 minutes):
+            • Hip Circles: 2 sets x 10 reps each direction
+            • Ankle Mobility: 2 sets x 15 reps each foot
+            • Shoulder Mobility: 2 sets x 12 reps each arm
+            • Spine Mobility: 2 sets x 8 reps each direction
+            • Hip Openers: 2 sets x 10 reps each side
+            • Thoracic Bridge: 2 sets x 8 reps
             
-            Core Work (15 minutes)
-            • Planks: 3 x 30 seconds
-            • Russian twists: 3 x 20 reps
-            • Leg raises: 3 x 15 reps
-            
-            Cool-Down (15 minutes)
-            • Light stretching
+            Light Jogging (10 minutes):
+            • Easy pace jogging with dynamic movements
+            • Include high knees, butt kicks, and side shuffles
             
             WEDNESDAY
             Focus: Recovery and Technique
@@ -949,18 +953,26 @@ public final class ChatGPTService: ObservableObject {
             MONDAY
             Focus: Speed and Anaerobic Capacity
             
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            • Light jogging
+            Warm-Up (40 minutes)
+            Dynamic Stretching (15 minutes):
+            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
+            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
+            • Walking Knee Hugs: 2 sets x 10 reps each leg
+            • Walking Quad Pulls: 2 sets x 10 reps each leg
+            • Walking High Knees: 2 sets x 20m
+            • Walking Butt Kicks: 2 sets x 20m
             
-            Speed Work (30 minutes)
-            • 6 x 200m at 85% effort with 2-minute recovery
-            • 4 x 400m at 80% effort with 3-minute recovery
+            Mobility Exercises (15 minutes):
+            • Hip Circles: 2 sets x 10 reps each direction
+            • Ankle Mobility: 2 sets x 15 reps each foot
+            • Shoulder Mobility: 2 sets x 12 reps each arm
+            • Spine Mobility: 2 sets x 8 reps each direction
+            • Hip Openers: 2 sets x 10 reps each side
+            • Thoracic Bridge: 2 sets x 8 reps
             
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
+            Light Jogging (10 minutes):
+            • Easy pace jogging with dynamic movements
+            • Include high knees, butt kicks, and side shuffles
             
             TUESDAY
             Focus: Strength and Power
@@ -1068,18 +1080,26 @@ public final class ChatGPTService: ObservableObject {
             MONDAY
             Focus: Aerobic Base
             
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            • Light jogging
+            Warm-Up (40 minutes)
+            Dynamic Stretching (15 minutes):
+            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
+            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
+            • Walking Knee Hugs: 2 sets x 10 reps each leg
+            • Walking Quad Pulls: 2 sets x 10 reps each leg
+            • Walking High Knees: 2 sets x 20m
+            • Walking Butt Kicks: 2 sets x 20m
             
-            Aerobic Run (60-75 minutes)
-            • Steady-state running at 70-75% effort
-            • Focus on maintaining consistent pace
+            Mobility Exercises (15 minutes):
+            • Hip Circles: 2 sets x 10 reps each direction
+            • Ankle Mobility: 2 sets x 15 reps each foot
+            • Shoulder Mobility: 2 sets x 12 reps each arm
+            • Spine Mobility: 2 sets x 8 reps each direction
+            • Hip Openers: 2 sets x 10 reps each side
+            • Thoracic Bridge: 2 sets x 8 reps
             
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
+            Light Jogging (10 minutes):
+            • Easy pace jogging with dynamic movements
+            • Include high knees, butt kicks, and side shuffles
             
             TUESDAY
             Focus: Speed and Anaerobic Capacity
@@ -1204,9 +1224,37 @@ public final class ChatGPTService: ObservableObject {
         
         // Add age group specific modifications
         if ageGroup.contains("U12") || ageGroup.contains("U14") {
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "4 sets x 6 reps", with: "3 sets x 8 reps")
+            // Younger age groups - bodyweight exercises only
+            customizedTemplate = customizedTemplate.replacingOccurrences(
+                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
+                with: "Strength Training (45 minutes)\n• Bodyweight squats: 3 sets x 12 reps\n• Push-ups: 3 sets x max reps\n• Plank holds: 3 sets x 30 seconds\n• Jumping jacks: 3 sets x 20 reps\n• Mountain climbers: 3 sets x 20 reps\n• Burpees: 3 sets x 10 reps"
+            )
             customizedTemplate = customizedTemplate.replacingOccurrences(of: "4 x 100m", with: "3 x 80m")
             customizedTemplate = customizedTemplate.replacingOccurrences(of: "6 x 200m", with: "4 x 150m")
+        } else if ageGroup.contains("U16") {
+            // U16 - introduction to basic weights with focus on form
+            customizedTemplate = customizedTemplate.replacingOccurrences(
+                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
+                with: "Strength Training (45 minutes)\n• Bodyweight squats: 3 sets x 15 reps\n• Push-ups: 3 sets x max reps\n• Light dumbbell squats: 3 sets x 12 reps\n• Light dumbbell lunges: 3 sets x 10 reps each leg\n• Medicine ball throws: 3 sets x 8 reps\n• Plank variations: 3 sets x 45 seconds"
+            )
+        } else if ageGroup.contains("U18") {
+            // U18 - moderate weights with focus on technique
+            customizedTemplate = customizedTemplate.replacingOccurrences(
+                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
+                with: "Strength Training (45 minutes)\n• Barbell squats: 4 sets x 8 reps\n• Romanian deadlifts: 3 sets x 10 reps\n• Bench press: 3 sets x 10 reps\n• Pull-ups: 3 sets x max reps\n• Box jumps: 3 sets x 10 reps\n• Medicine ball throws: 3 sets x 12 reps"
+            )
+        } else if ageGroup.contains("U20") {
+            // U20 - advanced strength training
+            customizedTemplate = customizedTemplate.replacingOccurrences(
+                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
+                with: "Strength Training (45 minutes)\n• Barbell squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Bench press: 4 sets x 6 reps\n• Pull-ups: 4 sets x max reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps\n• Power cleans: 3 sets x 5 reps"
+            )
+        } else {
+            // Senior - full strength program
+            customizedTemplate = customizedTemplate.replacingOccurrences(
+                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
+                with: "Strength Training (45 minutes)\n• Barbell squats: 4 sets x 5 reps\n• Deadlifts: 4 sets x 5 reps\n• Bench press: 4 sets x 5 reps\n• Pull-ups: 4 sets x max reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps\n• Power cleans: 3 sets x 5 reps\n• Snatch pulls: 3 sets x 5 reps"
+            )
         }
         
         // Add term specific modifications
@@ -1225,9 +1273,6 @@ public final class ChatGPTService: ObservableObject {
         } else if period.contains("Specific") {
             customizedTemplate = customizedTemplate.replacingOccurrences(of: "70-75% effort", with: "75-80% effort")
         }
-        
-        // Add a note that this is an offline-generated program
-        customizedTemplate = "OFFLINE GENERATED PROGRAM\n\n" + customizedTemplate
         
         // Cache the offline response
         cache[prompt] = customizedTemplate

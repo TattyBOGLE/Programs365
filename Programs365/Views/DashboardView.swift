@@ -21,12 +21,6 @@ struct DashboardView: View {
         itemAppearance.selected.iconColor = .white
         itemAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor.white]
         
-        // Reduce the tab bar height to one-third
-        let tabBarHeight: CGFloat = 49 // Default tab bar height
-        let newHeight = tabBarHeight / 3
-        itemAppearance.normal.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: -newHeight/2)
-        itemAppearance.selected.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: -newHeight/2)
-        
         // Apply the item appearance to all tab bar item states
         tabBarAppearance.stackedLayoutAppearance = itemAppearance
         tabBarAppearance.inlineLayoutAppearance = itemAppearance
@@ -34,6 +28,9 @@ struct DashboardView: View {
         
         UITabBar.appearance().standardAppearance = tabBarAppearance
         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+        
+        // Ensure tab bar is not hidden
+        UITabBar.appearance().isHidden = false
     }
     
     var body: some View {
@@ -53,14 +50,14 @@ struct DashboardView: View {
                     Label("Competitions".localized, systemImage: "trophy.fill")
                 }
             
-            InjuryView()
+            ParaAthletesView(chatGPTService: ChatGPTService(apiKey: "YOUR_API_KEY"))
                 .tabItem {
-                    Label("Injury".localized, systemImage: "bandage.fill")
+                    Label("Para".localized, systemImage: "figure.roll")
                 }
             
             MoreViewNew()
                 .tabItem {
-                    Label("More".localized, systemImage: "ellipsis.circle.fill")
+                    Label("More".localized, systemImage: "ellipsis")
                 }
         }
         .tint(.red)  // Make the selected tab items red to match the app's theme

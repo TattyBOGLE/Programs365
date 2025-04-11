@@ -18,22 +18,24 @@ struct LandingProgramCard: View {
     @State private var navigateToPrograms = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Image(systemName: icon)
-                .font(.title)
-                .foregroundColor(.red)
-            
-            Text(title)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            
-            Text(description)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-                .lineLimit(2)
-            
-            Button(action: { navigateToPrograms = true }) {
+        NavigationLink(destination: ProgramsView(initialCategory: title)) {
+            VStack(alignment: .leading, spacing: 16) {
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(Color.red)
+                    .frame(height: 32)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
+                    .lineLimit(2)
+                
                 Text("Start Training".localized)
                     .font(.subheadline)
                     .fontWeight(.medium)
@@ -43,13 +45,10 @@ struct LandingProgramCard: View {
                     .background(Color.red)
                     .cornerRadius(8)
             }
-        }
-        .padding(20)
-        .frame(width: 180)
-        .background(Color(UIColor.systemGray6))
-        .cornerRadius(16)
-        .navigationDestination(isPresented: $navigateToPrograms) {
-            ProgramsView()
+            .padding(20)
+            .frame(width: 180)
+            .background(Color(UIColor.systemGray6))
+            .cornerRadius(16)
         }
     }
 }
@@ -220,7 +219,7 @@ struct LandingView: View {
                             )
                         
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Welcome to Programs365".localized)
+                            Text("Welcome to Track&field365".localized)
                                 .font(.system(size: 40, weight: .heavy))
                                 .foregroundColor(.white)
                             
@@ -250,7 +249,7 @@ struct LandingView: View {
                                 LandingProgramCard(
                                     title: "Field Events".localized,
                                     description: "Jumping and throwing events training programs".localized,
-                                    icon: "figure.jump"
+                                    icon: "figure.disc.sports"
                                 )
                                 
                                 LandingProgramCard(

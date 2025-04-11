@@ -161,20 +161,30 @@ private struct FacilityLimitationsView: View {
 // MARK: - Enhanced Program Display View
 struct EnhancedProgramDisplayView: View {
     let program: String
-    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(program)
-                        .font(.body)
-                        .padding()
-                }
-            }
-            .navigationTitle("Training Program")
-            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        ScrollView {
+            Text(formatProgram(program))
+                .font(.body)
+                .padding()
         }
+    }
+    
+    private func formatProgram(_ program: String) -> AttributedString {
+        var attributedString = AttributedString(program)
+        
+        // Define the days of the week
+        let days = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"]
+        
+        // Format each day header
+        for day in days {
+            if let range = attributedString.range(of: day) {
+                attributedString[range].font = .title2.bold()
+                attributedString[range].foregroundColor = .red
+            }
+        }
+        
+        return attributedString
     }
 }
 
