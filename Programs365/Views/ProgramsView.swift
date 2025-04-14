@@ -11,32 +11,32 @@ struct AgeGroupCard: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(ageGroup.rawValue)
+            Text(ageGroup.rawValue)
                     .font(.headline)
                     .foregroundColor(.primary)
-                
+            
                 Text("\(eventCount) Available Events")
-                    .font(.subheadline)
+                .font(.subheadline)
                     .foregroundColor(.secondary)
-                
-                Spacer()
-                
-                HStack {
-                    Text("View Events")
-                        .font(.subheadline)
+            
+            Spacer()
+            
+            HStack {
+                Text("View Events")
+                .font(.subheadline)
                         .fontWeight(.medium)
-                        .foregroundColor(.red)
-                    
-                    Image(systemName: "chevron.right")
+                .foregroundColor(.red)
+            
+                Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(.red)
-                }
+                    .foregroundColor(.red)
             }
+        }
             .padding()
             .frame(maxWidth: .infinity)
             .frame(height: 120)
             .background(isSelected ? Color.red.opacity(0.1) : Color(UIColor.systemGray6))
-            .cornerRadius(16)
+        .cornerRadius(16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(isSelected ? Color.red : Color.clear, lineWidth: 2)
@@ -305,27 +305,27 @@ struct WeekCard: View {
     let week: Int
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Week \(week)")
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Week \(week)")
                 .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            HStack {
-                Text("View Program")
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Spacer()
+                            
+                            HStack {
+                                Text("View Program")
                     .foregroundColor(.blue)
                 Spacer()
-                Image(systemName: "chevron.right")
+                                Image(systemName: "chevron.right")
                     .foregroundColor(.blue)
-            }
-        }
+                            }
+                        }
         .frame(maxWidth: .infinity)
         .frame(height: 120)
-        .padding(20)
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(16)
+                        .padding(20)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.blue.opacity(0.3), lineWidth: 1)
@@ -365,8 +365,8 @@ struct ProgramsView: View {
     }
     
     var body: some View {
-        NavigationView {
-            ScrollView {
+            NavigationView {
+                ScrollView {
                 VStack(spacing: 24) {
                     // Search Bar
                     SearchBar(text: $searchText)
@@ -465,7 +465,7 @@ struct ProgramsView: View {
                 GridItem(.flexible(), spacing: 16)
             ], spacing: 16) {
                 ForEach(AgeGroup.allCases, id: \.self) { ageGroup in
-                    Button(action: {
+                            Button(action: {
                         selectedAgeGroup = ageGroup
                         showingEventSelection = true
                     }) {
@@ -531,7 +531,7 @@ struct ProgramsView: View {
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity)
-        .padding()
+                    .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(12)
         .padding(.horizontal)
@@ -1338,7 +1338,7 @@ struct ParaAthletesView: View {
             .background(Color.black.edgesIgnoringSafeArea(.all))
             .navigationTitle(getNavigationTitle())
             .navigationBarItems(leading: Button(action: handleBack) {
-                Image(systemName: "chevron.left")
+            Image(systemName: "chevron.left")
                     .foregroundColor(.white)
             })
         }
@@ -1348,15 +1348,15 @@ struct ParaAthletesView: View {
         if selectedWeek != nil {
             selectedWeek = nil
         } else if selectedPeriod != nil {
-            selectedPeriod = nil
-        } else if selectedTerm != nil {
-            selectedTerm = nil
-        } else if selectedClassification != nil {
-            selectedClassification = nil
-        } else if selectedEvent != nil {
-            selectedEvent = nil
-        } else if selectedAgeGroup != nil {
-            selectedAgeGroup = nil
+                selectedPeriod = nil
+            } else if selectedTerm != nil {
+                selectedTerm = nil
+            } else if selectedClassification != nil {
+                selectedClassification = nil
+            } else if selectedEvent != nil {
+                selectedEvent = nil
+            } else if selectedAgeGroup != nil {
+                selectedAgeGroup = nil
         } else {
             dismiss()
         }

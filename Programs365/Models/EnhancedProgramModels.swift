@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Enhanced Program Models
 
 // Periodization model for progressive overload
-public enum PeriodizationModel: String, CaseIterable, Identifiable {
+public enum PeriodizationModel: String, Codable, CaseIterable, Identifiable {
     case linear = "Linear"
     case undulating = "Undulating"
     case block = "Block"
@@ -27,7 +27,7 @@ public enum PeriodizationModel: String, CaseIterable, Identifiable {
 }
 
 // Training load management
-public enum LoadManagementType: String, CaseIterable, Identifiable {
+public enum LoadManagementType: String, Codable, CaseIterable, Identifiable {
     case standard = "Standard"
     case conservative = "Conservative"
     case aggressive = "Aggressive"
@@ -50,7 +50,7 @@ public enum LoadManagementType: String, CaseIterable, Identifiable {
 }
 
 // Environmental context
-public enum TrainingEnvironment: String, CaseIterable, Identifiable {
+public enum TrainingEnvironment: String, Codable, CaseIterable, Identifiable {
     case indoor = "Indoor"
     case outdoor = "Outdoor"
     case mixed = "Mixed"
@@ -59,7 +59,7 @@ public enum TrainingEnvironment: String, CaseIterable, Identifiable {
 }
 
 // Weather conditions
-public enum WeatherCondition: String, CaseIterable, Identifiable {
+public enum WeatherCondition: String, Codable, CaseIterable, Identifiable {
     case ideal = "Ideal"
     case hot = "Hot"
     case cold = "Cold"
@@ -70,7 +70,7 @@ public enum WeatherCondition: String, CaseIterable, Identifiable {
 }
 
 // Facility limitations
-public enum FacilityLimitation: String, CaseIterable, Identifiable {
+public enum FacilityLimitation: String, Codable, CaseIterable, Identifiable {
     case none = "None"
     case limitedSpace = "Limited Space"
     case limitedEquipment = "Limited Equipment"
@@ -81,7 +81,7 @@ public enum FacilityLimitation: String, CaseIterable, Identifiable {
 }
 
 // Female athlete considerations
-public enum MenstrualPhase: String, CaseIterable, Identifiable {
+public enum MenstrualPhase: String, Codable, CaseIterable, Identifiable {
     case follicular = "Follicular"
     case ovulatory = "Ovulatory"
     case luteal = "Luteal"
@@ -92,7 +92,7 @@ public enum MenstrualPhase: String, CaseIterable, Identifiable {
 }
 
 // Enhanced program parameters
-public struct EnhancedProgramParameters {
+public struct EnhancedProgramParameters: Codable {
     var ageGroup: AgeGroup
     var event: TrackEvent
     var term: TrainingTerm
@@ -139,7 +139,7 @@ public struct EnhancedProgramParameters {
 }
 
 // Event-specific warm-up protocols
-public struct WarmUpProtocol {
+public struct WarmUpProtocol: Codable {
     var event: TrackEvent
     var period: TrainingPeriod
     var components: [WarmUpComponent]
@@ -152,7 +152,7 @@ public struct WarmUpProtocol {
 }
 
 // Warm-up components
-public struct WarmUpComponent {
+public struct WarmUpComponent: Codable {
     var name: String
     var duration: Int // in minutes
     var exercises: [String]
@@ -167,7 +167,7 @@ public struct WarmUpComponent {
 }
 
 // Event-specific injury prevention protocols
-public struct InjuryPreventionProtocol {
+public struct InjuryPreventionProtocol: Codable {
     var event: TrackEvent
     var exercises: [InjuryPreventionExercise]
     
@@ -178,7 +178,7 @@ public struct InjuryPreventionProtocol {
 }
 
 // Injury prevention exercises
-public struct InjuryPreventionExercise {
+public struct InjuryPreventionExercise: Codable {
     var name: String
     var sets: Int
     var reps: Int
@@ -195,7 +195,7 @@ public struct InjuryPreventionExercise {
 }
 
 // Session sequencing rules
-public struct SessionSequencingRule {
+public struct SessionSequencingRule: Codable {
     var event: TrackEvent
     var muscleGroups: [String]
     var recoveryTime: Int // in hours
@@ -208,7 +208,7 @@ public struct SessionSequencingRule {
 }
 
 // Gender enum for consistency
-public enum Gender: String, CaseIterable, Identifiable {
+public enum Gender: String, Codable, CaseIterable, Identifiable {
     case male = "Male"
     case female = "Female"
     

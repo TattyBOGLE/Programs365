@@ -4,6 +4,9 @@ enum AppConfig {
     // MARK: - API Configuration
     enum API {
         static var chatGPTApiKey: String {
+            // Initialize LocalConfig if needed
+            LocalConfig.initialize()
+            
             // First try to get from environment (development)
             if let key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] {
                 print("DEBUG: Using API key from environment")
@@ -16,14 +19,9 @@ enum AppConfig {
                 return key
             }
             
-            // Fall back to hardcoded key (production)
-            // IMPORTANT: This is a fallback and should be replaced with your actual key
-            // before building for production
-            let productionKey = "YOUR_OPENAI_API_KEY_HERE"
-            
-            // For security, only print the length of the key
-            print("DEBUG: Using production API key with length:", productionKey.count)
-            return productionKey
+            // If no key is found, return an empty string and log an error
+            print("ERROR: No OpenAI API key found. Please set your API key in the app settings.")
+            return ""
         }
         
         static let baseURL = "https://api.openai.com/v1/chat/completions"
