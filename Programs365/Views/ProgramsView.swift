@@ -161,6 +161,7 @@ struct WeeksList: View {
     @State private var programTitle = ""
     @State private var programNotes = ""
     @State private var showingSaveSuccess = false
+    @State private var selectedTermDuration: TermDuration?
     
     var body: some View {
         ScrollView {
@@ -236,52 +237,73 @@ struct WeeksList: View {
             selectedAgeGroup = AgeGroup(rawValue: ageGroup)
             selectedTerm = TrainingTerm(rawValue: term)
             selectedPeriod = TrainingPeriod(rawValue: period)
+            selectedTermDuration = TermDuration(rawValue: term)
         }
     }
     
     private func generateProgram(for week: Int) async {
         isLoading = true
         do {
-            if let event = selectedEvent {
-                // Use enhanced program generation
+            if let event = selectedEvent, let ageGroup = selectedAgeGroup {
                 let parameters = EnhancedProgramParameters(
-                    ageGroup: selectedAgeGroup ?? .u16,
+                    ageGroup: ageGroup,
                     event: event,
-                    term: .shortTerm,
+                    term: selectedTermDuration?.term ?? .shortTerm,
                     period: selectedPeriod ?? .specific,
                     gender: selectedGender
                 )
-                let program = try await enhancedProgramService.generateProgram(
-                    parameters: parameters,
-                    week: week
-                )
-                await MainActor.run {
-                    generatedProgram = program
-                    isLoading = false
-                    showingProgramSheet = true
-                }
-            } else {
-                // Use existing program generation
-                let eventStr = selectedEvent?.rawValue ?? "General"
-                let ageGroupStr = selectedAgeGroup?.rawValue ?? "U16"
-                let termStr = selectedTerm?.rawValue ?? "Short term"
-                let periodStr = selectedPeriod?.rawValue ?? "General"
+                
+                // Get event-specific context
+                let eventContext = getEventSpecificContext(event: event, period: selectedPeriod ?? .specific)
                 
                 let prompt = """
                 Generate a detailed training program for:
-                Event: \(eventStr)
-                Age Group: \(ageGroupStr)
-                Term: \(termStr)
-                Period: \(periodStr)
+                Age Group: \(ageGroup.rawValue)
+                Event: \(event.rawValue)
+                Term: \(selectedTermDuration?.rawValue ?? "Short term")
+                Period: \(selectedPeriod?.rawValue ?? "Specific")
                 Week: \(week)
+                Gender: \(selectedGender.rawValue)
                 
-                Please provide a structured weekly program with:
-                - Specific workouts for each day (use MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY as day headers)
-                - Rest and recovery recommendations
-                - Technical focus points
-                - Key performance indicators
+                Start the program with a personalized greeting and event-specific context, like this:
+                "Hi [Athlete],
+                Just putting your \(event.rawValue) program together based on your current goals, preferences, and where you are in the season. This [X]-day \(selectedPeriod?.rawValue ?? "Specific") phase plan is designed to \(eventContext.goals). Each session is built to support your \(eventContext.mechanics), \(eventContext.rhythm), and recovery—so you can \(eventContext.outcome) feeling fast, fresh, and focused."
                 
-                Format each day's section with the day name in all caps as a header, followed by the workout details.
+                Then provide a structured weekly program with the following format for each day:
+                
+                [DAY]: [Session Type]
+                
+                Warm-up (XX mins total)
+                    - Exercise 1: Sets x Reps/Duration
+                    - Exercise 2: Sets x Reps/Duration
+                    [Continue with all warm-up exercises]
+                
+                Session
+                    - Exercise 1: Sets x Reps/Duration @ Intensity
+                    - Exercise 2: Sets x Reps/Duration @ Intensity
+                    [Continue with all session exercises]
+                
+                Cooldown (XX mins)
+                    - Exercise 1: Sets x Reps/Duration
+                    - Exercise 2: Sets x Reps/Duration
+                    [Continue with all cooldown exercises]
+                
+                For each day, include:
+                1. Specific warm-up exercises with exact sets, reps, and durations
+                2. Main session exercises with exact sets, reps, durations, and intensities
+                3. Cooldown exercises with exact sets, reps, and durations
+                4. Rest periods between sets
+                5. Technical focus points
+                6. Recovery recommendations
+                
+                Ensure the program is:
+                - Age-appropriate for \(ageGroup.rawValue)
+                - Event-specific for \(event.rawValue)
+                - Period-appropriate for \(selectedPeriod?.rawValue ?? "Specific")
+                - Term-appropriate for \(selectedTermDuration?.rawValue ?? "Short term")
+                - Gender-appropriate for \(selectedGender.rawValue)
+                
+                Format each day's section with the day name in all caps as a header, followed by the detailed workout plan.
                 """
                 
                 let response = try await chatGPTService.generateResponse(prompt: prompt)
@@ -297,6 +319,54 @@ struct WeeksList: View {
                 isLoading = false
                 showError = true
             }
+        }
+    }
+    
+    // Helper function to get event-specific context
+    private func getEventSpecificContext(event: TrackEvent, period: TrainingPeriod) -> (goals: String, mechanics: String, rhythm: String, outcome: String) {
+        switch event {
+        case .sprints100m, .sprints200m, .sprints400m:
+            return (
+                goals: "enhance your explosive power, improve acceleration, and perfect your sprint mechanics",
+                mechanics: "sprint mechanics",
+                rhythm: "acceleration and top-end speed rhythm",
+                outcome: "hit the blocks with explosive power"
+            )
+        case .middleDistance800m, .middleDistance1500m:
+            return (
+                goals: "build endurance, improve pacing strategies, and enhance your race tactics",
+                mechanics: "middle-distance running mechanics",
+                rhythm: "pace and race strategy rhythm",
+                outcome: "execute your race plan with confidence"
+            )
+        case .longDistance3000m, .longDistance5000m:
+            return (
+                goals: "develop endurance, improve aerobic capacity, and perfect your pacing",
+                mechanics: "long-distance running mechanics",
+                rhythm: "endurance and pacing rhythm",
+                outcome: "maintain consistent splits throughout your race"
+            )
+        case .hurdles110m, .hurdles400m:
+            return (
+                goals: "perfect your hurdle technique, improve stride pattern, and enhance your rhythm",
+                mechanics: "hurdle mechanics",
+                rhythm: "hurdle rhythm and stride pattern",
+                outcome: "flow smoothly over the hurdles"
+            )
+        case .relay4x100m, .relay4x400m:
+            return (
+                goals: "perfect your baton exchange technique, improve team coordination, and enhance your relay strategy",
+                mechanics: "relay mechanics",
+                rhythm: "relay exchange rhythm",
+                outcome: "execute smooth baton exchanges"
+            )
+        default:
+            return (
+                goals: "improve your technique and performance",
+                mechanics: "event-specific mechanics",
+                rhythm: "event-specific rhythm",
+                outcome: "achieve your performance goals"
+            )
         }
     }
 }
@@ -356,6 +426,8 @@ struct ProgramsView: View {
     @State private var showingTermSelection = false
     @State private var showingProgramSheet = false
     @State private var ageGroup: AgeGroup = .u14
+    @State private var selectedTermDuration: TermDuration?
+    @Environment(\.dismiss) private var dismiss
     
     let initialCategory: String?
     
@@ -380,36 +452,75 @@ struct ProgramsView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 24) {
-                    // Search Bar
-                    SearchBar(text: $searchText)
+                VStack(spacing: 0) {
+                    // Hero Banner
+                    ZStack(alignment: .bottomLeading) {
+                        Image("track_hero_banner")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 200)
+                            .clipped()
+                            .overlay(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [.black.opacity(0.7), .clear]),
+                                    startPoint: .bottom,
+                                    endPoint: .top
+                                )
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Training Programs")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            
+                            Text("Customized programs for your athletic goals")
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.9))
+                        }
+                        .padding()
+                    }
+                
+                    VStack(spacing: 20) {
+                        // Gender Selection
+                        Picker("Gender", selection: $selectedGender) {
+                            Text("Male").tag(Gender.male)
+                            Text("Female").tag(Gender.female)
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding()
+                        
+                        // Age Group Selection
+                        Picker("Age Group", selection: $ageGroup) {
+                            ForEach(AgeGroup.allCases, id: \.self) { group in
+                                Text(group.rawValue).tag(group)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding()
+                        
+                        // Events Grid
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            ForEach(filteredEvents, id: \.self) { event in
+                                Button(action: {
+                                    selectedEvent = event
+                                    showingTermSelection = true
+                                }) {
+                                    TrackEventCard(event: event)
+                                }
+                            }
+                        }
                         .padding(.horizontal)
-                    
-                    // Hero Section
-                    heroSection
-                    
-                    // Quick Access Section
-                    quickAccessSection
-                    
-                    // Age Groups Section
-                    ageGroupsSection
-                    
-                    // Saved Programs Section
-                    savedProgramsSection
-                }
-                .padding(.vertical)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .background(Color(UIColor.systemBackground))
-            .sheet(isPresented: $showingEventSelection) {
-                if let ageGroup = selectedAgeGroup {
-                    EventsView(ageGroup: ageGroup, initialCategory: initialCategory)
+                    }
                 }
             }
-            .sheet(isPresented: $showingTermSelection) {
-                if let event = selectedEvent {
-                    TrainingTermsView(event: event, ageGroup: ageGroup)
-                }
+            .navigationTitle("\(ageGroup.rawValue) Events")
+            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .navigationBarItems(leading: Button("Back") { dismiss() })
+        }
+        .sheet(isPresented: $showingTermSelection) {
+            if let event = selectedEvent {
+                TrainingTermsView(event: event, ageGroup: ageGroup)
             }
         }
     }
@@ -717,7 +828,7 @@ struct TrainingTermsView: View {
                 VStack(spacing: 16) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("track")
+                        Image("track_hero_banner")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(height: 200)
@@ -1176,10 +1287,11 @@ struct SaveProgramView: View {
 struct LoadingView: View {
     @State private var progress: Double = 0
     @State private var animationOffset: CGFloat = 0
+    @State private var percentage: Int = 0
     
     var body: some View {
-        VStack(spacing: 30) {
-            // Athlete Animation
+        VStack(spacing: 20) {
+            // Running Man Animation
             ZStack {
                 // Track/Background
                 RoundedRectangle(cornerRadius: 20)
@@ -1190,38 +1302,54 @@ struct LoadingView: View {
                 HStack(spacing: 0) {
                     Image(systemName: "figure.run")
                         .font(.system(size: 40))
-                .foregroundColor(.red)
+                        .foregroundColor(.red)
                         .offset(x: animationOffset)
                 }
             }
             .frame(width: 280)
             
-            // Progress Bar
-            VStack(spacing: 12) {
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 8)
-                    
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.red)
-                        .frame(width: 280 * progress, height: 8)
-                }
-                .frame(width: 280)
-                
+            // Progress Text
+            VStack(spacing: 8) {
                 Text("Generating your program...")
                     .font(.headline)
                     .foregroundColor(.white)
+                
+                Text("\(percentage)%")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.red)
             }
+            
+            // Progress Bar
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(height: 8)
+                
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.red)
+                    .frame(width: 280 * progress, height: 8)
+            }
+            .frame(width: 280)
         }
+        .padding()
         .onAppear {
             // Start the animations
             withAnimation(Animation.linear(duration: 2).repeatForever(autoreverses: false)) {
                 animationOffset = 240
             }
             
+            // Animate progress and percentage
             withAnimation(Animation.easeInOut(duration: 2)) {
                 progress = 1.0
+            }
+            
+            // Count up percentage
+            let timer = Timer.publish(every: 0.02, on: .main, in: .common).autoconnect()
+            _ = timer.sink { _ in
+                if percentage < 100 {
+                    percentage += 1
+                }
             }
         }
     }
@@ -1240,10 +1368,10 @@ struct ParaAthletesView: View {
     var body: some View {
         NavigationView {
             ScrollView {
-                if selectedAgeGroup == nil {
+                VStack(spacing: 0) {
                     // Hero Banner
                     ZStack(alignment: .bottomLeading) {
-                        Image("wheelchair")
+                        Image("track_hero_banner")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(height: 200)
@@ -1262,100 +1390,102 @@ struct ParaAthletesView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                             
-                            Text("Select Age Group")
+                            Text("Specialized training programs for para-athletes")
                                 .font(.subheadline)
                                 .foregroundColor(.white.opacity(0.9))
                         }
                         .padding()
                     }
                     
-                    // Age Groups Grid
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        ForEach(["U18", "U20", "Senior"], id: \.self) { age in
-                            Button(action: { selectedAgeGroup = age }) {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    Text(age)
-                                        .font(.title)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                    
-                                    Text(getAgeDescription(for: age))
-                                        .font(.subheadline)
-                                        .foregroundColor(.gray)
-                                        .lineLimit(2)
-                                    
-                                    Spacer()
-                                    
-                                    HStack {
-                                        Text("View Events")
-                                            .foregroundColor(.red)
-                                        Image(systemName: "chevron.right")
-                                            .foregroundColor(.red)
+                    if selectedAgeGroup == nil {
+                        // Age Groups Grid
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                            ForEach(["U18", "U20", "Senior"], id: \.self) { age in
+                                Button(action: { selectedAgeGroup = age }) {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Text(age)
+                                            .font(.title)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(.white)
+                                        
+                                        Text(getAgeDescription(for: age))
+                                            .font(.subheadline)
+                                            .foregroundColor(.gray)
+                                            .lineLimit(2)
+                                        
+                                        Spacer()
+                                        
+                                        HStack {
+                                            Text("View Events")
+                                                .foregroundColor(.red)
+                                            Image(systemName: "chevron.right")
+                                                .foregroundColor(.red)
+                                        }
                                     }
+                                    .frame(height: 160)
+                                    .padding(20)
+                                    .background(Color.gray.opacity(0.1))
+                                    .cornerRadius(16)
                                 }
-                                .frame(height: 160)
-                                .padding(20)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(16)
                             }
                         }
-                    }
-                    .padding()
-                } else if selectedEvent == nil {
-                    // Events Grid
-                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
-                        ForEach(getParaEvents(), id: \.self) { event in
-                            Button(action: { selectedEvent = event }) {
-                                ParaEventCard(event: event)
+                        .padding()
+                    } else if selectedEvent == nil {
+                        // Events Grid
+                        LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
+                            ForEach(getParaEvents(), id: \.self) { event in
+                                Button(action: { selectedEvent = event }) {
+                                    ParaEventCard(event: event)
+                                }
                             }
                         }
-                    }
-                    .padding()
-                } else if selectedClassification == nil {
-                    // Classifications Grid
-                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
-                        ForEach(getClassifications(for: selectedEvent!), id: \.self) { classification in
-                            Button(action: { selectedClassification = classification }) {
-                                ParaClassificationCard(classification: classification)
+                        .padding()
+                    } else if selectedClassification == nil {
+                        // Classifications Grid
+                        LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
+                            ForEach(getClassifications(for: selectedEvent!), id: \.self) { classification in
+                                Button(action: { selectedClassification = classification }) {
+                                    ParaClassificationCard(classification: classification)
+                                }
                             }
                         }
-                    }
-                    .padding()
-                } else if selectedTerm == nil {
-                    // Terms Grid
-                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
-                        ForEach(TrainingTerm.allCases) { term in
-                            Button(action: { selectedTerm = term }) {
-                                TermCard(term: term)
+                        .padding()
+                    } else if selectedTerm == nil {
+                        // Terms Grid
+                        LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
+                            ForEach(TrainingTerm.allCases) { term in
+                                Button(action: { selectedTerm = term }) {
+                                    TermCard(term: term)
+                                }
                             }
                         }
-                    }
-                    .padding()
-                } else if selectedPeriod == nil {
-                    // Periods Grid
-                    LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
-                        ForEach(TrainingPeriod.allCases) { period in
-                            Button(action: { selectedPeriod = period }) {
-                                PeriodCard(period: period, term: selectedTerm!)
+                        .padding()
+                    } else if selectedPeriod == nil {
+                        // Periods Grid
+                        LazyVGrid(columns: [GridItem(.flexible())], spacing: 20) {
+                            ForEach(TrainingPeriod.allCases) { period in
+                                Button(action: { selectedPeriod = period }) {
+                                    PeriodCard(period: period, term: selectedTerm!)
+                                }
                             }
                         }
+                        .padding()
+                    } else {
+                        // Weeks List
+                        WeeksList(
+                            period: selectedPeriod!.rawValue,
+                            term: selectedTerm!.rawValue,
+                            ageGroup: selectedAgeGroup!,
+                            event: selectedEvent!.rawValue,
+                            chatGPTService: chatGPTService
+                        )
                     }
-                    .padding()
-                } else {
-                    // Weeks List
-                    WeeksList(
-                        period: selectedPeriod!.rawValue,
-                        term: selectedTerm!.rawValue,
-                        ageGroup: selectedAgeGroup!,
-                        event: selectedEvent!.rawValue,
-                        chatGPTService: chatGPTService
-                    )
                 }
             }
             .background(Color.black.edgesIgnoringSafeArea(.all))
             .navigationTitle(getNavigationTitle())
             .navigationBarItems(leading: Button(action: handleBack) {
-            Image(systemName: "chevron.left")
+                Image(systemName: "chevron.left")
                     .foregroundColor(.white)
             })
         }
@@ -2096,46 +2226,66 @@ struct TrainingContextSelectionView: View {
     private func generateProgram(for week: Int) async {
         isLoading = true
         do {
-            if let event = selectedEvent {
-                // Use enhanced program generation
+            if let event = selectedEvent, let ageGroup = selectedAgeGroup {
                 let parameters = EnhancedProgramParameters(
-                    ageGroup: selectedAgeGroup ?? .u16,
+                    ageGroup: ageGroup,
                     event: event,
                     term: selectedTermDuration?.term ?? .shortTerm,
                     period: selectedPeriod ?? .specific,
                     gender: selectedGender
                 )
-                let program = try await enhancedProgramService.generateProgram(
-                    parameters: parameters,
-                    week: week
-                )
-                await MainActor.run {
-                    generatedProgram = program
-                    isLoading = false
-                    showingProgramSheet = true
-                }
-            } else {
-                // Use existing program generation
-                let eventStr = selectedEvent?.rawValue ?? "General"
-                let ageGroupStr = selectedAgeGroup?.rawValue ?? "U16"
-                let termStr = selectedTermDuration?.rawValue ?? "Short term"
-                let periodStr = selectedPeriod?.rawValue ?? "General"
+                
+                // Get event-specific context
+                let eventContext = getEventSpecificContext(event: event, period: selectedPeriod ?? .specific)
                 
                 let prompt = """
                 Generate a detailed training program for:
-                Event: \(eventStr)
-                Age Group: \(ageGroupStr)
-                Term: \(termStr)
-                Period: \(periodStr)
+                Age Group: \(ageGroup.rawValue)
+                Event: \(event.rawValue)
+                Term: \(selectedTermDuration?.rawValue ?? "Short term")
+                Period: \(selectedPeriod?.rawValue ?? "Specific")
                 Week: \(week)
+                Gender: \(selectedGender.rawValue)
                 
-                Please provide a structured weekly program with:
-                - Specific workouts for each day (use MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY as day headers)
-                - Rest and recovery recommendations
-                - Technical focus points
-                - Key performance indicators
+                Start the program with a personalized greeting and event-specific context, like this:
+                "Hi [Athlete],
+                Just putting your \(event.rawValue) program together based on your current goals, preferences, and where you are in the season. This [X]-day \(selectedPeriod?.rawValue ?? "Specific") phase plan is designed to \(eventContext.goals). Each session is built to support your \(eventContext.mechanics), \(eventContext.rhythm), and recovery—so you can \(eventContext.outcome) feeling fast, fresh, and focused."
                 
-                Format each day's section with the day name in all caps as a header, followed by the workout details.
+                Then provide a structured weekly program with the following format for each day:
+                
+                [DAY]: [Session Type]
+                
+                Warm-up (XX mins total)
+                    - Exercise 1: Sets x Reps/Duration
+                    - Exercise 2: Sets x Reps/Duration
+                    [Continue with all warm-up exercises]
+                
+                Session
+                    - Exercise 1: Sets x Reps/Duration @ Intensity
+                    - Exercise 2: Sets x Reps/Duration @ Intensity
+                    [Continue with all session exercises]
+                
+                Cooldown (XX mins)
+                    - Exercise 1: Sets x Reps/Duration
+                    - Exercise 2: Sets x Reps/Duration
+                    [Continue with all cooldown exercises]
+                
+                For each day, include:
+                1. Specific warm-up exercises with exact sets, reps, and durations
+                2. Main session exercises with exact sets, reps, durations, and intensities
+                3. Cooldown exercises with exact sets, reps, and durations
+                4. Rest periods between sets
+                5. Technical focus points
+                6. Recovery recommendations
+                
+                Ensure the program is:
+                - Age-appropriate for \(ageGroup.rawValue)
+                - Event-specific for \(event.rawValue)
+                - Period-appropriate for \(selectedPeriod?.rawValue ?? "Specific")
+                - Term-appropriate for \(selectedTermDuration?.rawValue ?? "Short term")
+                - Gender-appropriate for \(selectedGender.rawValue)
+                
+                Format each day's section with the day name in all caps as a header, followed by the detailed workout plan.
                 """
                 
                 let response = try await chatGPTService.generateResponse(prompt: prompt)
@@ -2151,6 +2301,106 @@ struct TrainingContextSelectionView: View {
                 isLoading = false
                 showError = true
             }
+        }
+    }
+    
+    // Helper function to get event-specific context
+    private func getEventSpecificContext(event: TrackEvent, period: TrainingPeriod) -> (goals: String, mechanics: String, rhythm: String, outcome: String) {
+        switch event {
+        case .sprints100m, .sprints200m, .sprints400m:
+            return (
+                goals: "enhance your explosive power, improve acceleration, and perfect your sprint mechanics",
+                mechanics: "sprint mechanics",
+                rhythm: "acceleration and top-end speed rhythm",
+                outcome: "hit the blocks with explosive power"
+            )
+        case .middleDistance800m, .middleDistance1500m:
+            return (
+                goals: "build endurance, improve pacing strategies, and enhance your race tactics",
+                mechanics: "middle-distance running mechanics",
+                rhythm: "pace and race strategy rhythm",
+                outcome: "execute your race plan with confidence"
+            )
+        case .longDistance3000m, .longDistance5000m:
+            return (
+                goals: "develop endurance, improve aerobic capacity, and perfect your pacing",
+                mechanics: "long-distance running mechanics",
+                rhythm: "endurance and pacing rhythm",
+                outcome: "maintain consistent splits throughout your race"
+            )
+        case .hurdles110m, .hurdles400m:
+            return (
+                goals: "perfect your hurdle technique, improve stride pattern, and enhance your rhythm",
+                mechanics: "hurdle mechanics",
+                rhythm: "hurdle rhythm and stride pattern",
+                outcome: "flow smoothly over the hurdles"
+            )
+        case .relay4x100m, .relay4x400m:
+            return (
+                goals: "perfect your baton exchange technique, improve team coordination, and enhance your relay strategy",
+                mechanics: "relay mechanics",
+                rhythm: "relay exchange rhythm",
+                outcome: "execute smooth baton exchanges"
+            )
+        default:
+            return (
+                goals: "improve your technique and performance",
+                mechanics: "event-specific mechanics",
+                rhythm: "event-specific rhythm",
+                outcome: "achieve your performance goals"
+            )
+        }
+    }
+}
+
+// Add AnimatedMan view
+struct AnimatedMan: View {
+    var body: some View {
+        VStack {
+            Image(systemName: "figure.run")
+                .font(.system(size: 100))
+                .foregroundColor(.red)
+                .symbolEffect(.bounce, options: .repeating)
+        }
+    }
+}
+
+// Add TermDuration enum
+enum TermDuration: String, CaseIterable {
+    case short = "Short term"
+    case medium = "Medium term"
+    case long = "Long term"
+    
+    var description: String {
+        switch self {
+        case .short:
+            return "4-6 weeks of focused training for immediate performance improvements"
+        case .medium:
+            return "8-12 weeks of progressive training to build strength and technique"
+        case .long:
+            return "16+ weeks of comprehensive training for major competitions"
+        }
+    }
+    
+    var term: TrainingTerm {
+        switch self {
+        case .short:
+            return .shortTerm
+        case .medium:
+            return .mediumTerm
+        case .long:
+            return .longTerm
+        }
+    }
+    
+    var periods: [TrainingPeriod] {
+        switch self {
+        case .short:
+            return [.specific, .competition]
+        case .medium:
+            return [.general, .specific, .competition]
+        case .long:
+            return TrainingPeriod.allCases
         }
     }
 }
