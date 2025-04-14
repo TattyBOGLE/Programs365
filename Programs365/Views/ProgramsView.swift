@@ -355,6 +355,7 @@ struct ProgramsView: View {
     @State private var showingEventSelection = false
     @State private var showingTermSelection = false
     @State private var showingProgramSheet = false
+    @State private var ageGroup: AgeGroup = .u14
     
     let initialCategory: String?
     
@@ -364,9 +365,21 @@ struct ProgramsView: View {
         _enhancedProgramService = StateObject(wrappedValue: EnhancedProgramService(chatGPTService: chatGPTService))
     }
     
+    var filteredEvents: [TrackEvent] {
+        // Filter events based on gender
+        TrackEvent.allCases.filter { event in
+            switch selectedGender {
+            case .male:
+                return event.category != "Para" && !event.rawValue.contains("Women")
+            case .female:
+                return event.category != "Para" && !event.rawValue.contains("Men")
+            }
+        }
+    }
+    
     var body: some View {
-            NavigationView {
-                ScrollView {
+        NavigationView {
+            ScrollView {
                 VStack(spacing: 24) {
                     // Search Bar
                     SearchBar(text: $searchText)
@@ -395,7 +408,7 @@ struct ProgramsView: View {
             }
             .sheet(isPresented: $showingTermSelection) {
                 if let event = selectedEvent {
-                    TermSelectionView(event: event, selectedTerm: $selectedTerm)
+                    TrainingTermsView(event: event, ageGroup: ageGroup)
                 }
             }
         }
@@ -628,6 +641,7 @@ struct EventsView: View {
     @State private var selectedGender: Gender = .male
     @State private var selectedEvent: TrackEvent?
     @State private var showingTermSelection = false
+    @Environment(\.dismiss) private var dismiss
     
     var filteredEvents: [TrackEvent] {
         let events = ageGroup.allowedEvents.filter { event in
@@ -654,41 +668,44 @@ struct EventsView: View {
     }
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Gender Selection
-                Picker("Gender", selection: $selectedGender) {
-                    Text("Male").tag(Gender.male)
-                    Text("Female").tag(Gender.female)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding()
-                
-                // Events Grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    ForEach(filteredEvents, id: \.self) { event in
-                        Button(action: {
-                            selectedEvent = event
-                            showingTermSelection = true
-                        }) {
-                            TrackEventCard(event: event)
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Gender Selection
+                    Picker("Gender", selection: $selectedGender) {
+                        Text("Male").tag(Gender.male)
+                        Text("Female").tag(Gender.female)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding()
+                    
+                    // Events Grid
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        ForEach(filteredEvents, id: \.self) { event in
+                            Button(action: {
+                                selectedEvent = event
+                                showingTermSelection = true
+                            }) {
+                                TrackEventCard(event: event)
+                            }
                         }
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
             }
+            .navigationTitle("\(ageGroup.rawValue) Events")
+            .background(Color.black.edgesIgnoringSafeArea(.all))
+            .navigationBarItems(leading: Button("Back") { dismiss() })
         }
-        .navigationTitle("\(ageGroup.rawValue) Events")
-        .background(Color.black.edgesIgnoringSafeArea(.all))
         .sheet(isPresented: $showingTermSelection) {
             if let event = selectedEvent {
-                TermsView(event: event, ageGroup: ageGroup)
+                TrainingTermsView(event: event, ageGroup: ageGroup)
             }
         }
     }
 }
 
-struct TermsView: View {
+struct TrainingTermsView: View {
     let event: TrackEvent
     let ageGroup: AgeGroup
     @Environment(\.dismiss) private var dismiss
