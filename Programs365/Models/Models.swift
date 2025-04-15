@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 // MARK: - Age Groups
-public enum AgeGroup: String, CaseIterable, Identifiable {
+public enum AgeGroup: String, Codable, CaseIterable, Identifiable {
     case u12 = "U12"
     case u14 = "U14"
     case u16 = "U16"
@@ -58,7 +58,7 @@ public enum AgeGroup: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Track Events
-public enum TrackEvent: String, CaseIterable, Identifiable {
+public enum TrackEvent: String, Codable, CaseIterable, Identifiable {
     // Sprints
     case sprints75m = "75m"
     case sprints100m = "100m"
@@ -143,7 +143,7 @@ public enum TrackEvent: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Training Periods
-public enum TrainingPeriod: String, CaseIterable, Identifiable {
+public enum TrainingPeriod: String, Codable, CaseIterable, Identifiable {
     case general = "General"
     case specific = "Specific"
     case preCompetition = "Pre-Competition"

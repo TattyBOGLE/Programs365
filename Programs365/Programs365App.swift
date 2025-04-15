@@ -16,8 +16,7 @@ struct Programs365App: App {
     
     var body: some Scene {
         WindowGroup {
-            DashboardView()
-                .preferredColorScheme(.dark)
+            LoginLandingView()
         }
     }
 }

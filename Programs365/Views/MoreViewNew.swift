@@ -18,124 +18,138 @@ struct MoreViewNew: View {
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    Text("More Options")
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                    
-                    Text("Access additional features and settings")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                    
-                    // Injury Analysis Section
-                    NavigationLink(destination: InjuryAnalysisView()) {
-                        MoreOptionCardNew(
-                            title: "Injury Analysis".localized,
-                            subtitle: "Analyze and track injuries".localized,
-                            icon: "bandage.fill",
-                            iconColor: .red
-                        )
+            List {
+                Section(header: Text("Resources")) {
+                    Button(action: { showingCoachesCorner = true }) {
+                        Label("Coaches Corner", systemImage: "person.2.fill")
                     }
                     
-                    // Injury Section
                     NavigationLink(destination: InjuryView()) {
-                        MoreOptionCardNew(
-                            title: "Injury".localized,
-                            subtitle: "Manage and track injuries".localized,
-                            icon: "cross.case.fill",
-                            iconColor: .red
-                        )
+                        Label("Injury Prevention", systemImage: "bandage.fill")
                     }
                     
-                    // Progress Section
-                    NavigationLink(destination: ProgressView()) {
-                        MoreOptionCardNew(
-                            title: "Progress".localized,
-                            subtitle: "Track your progress".localized,
-                            icon: "chart.line.uptrend.xyaxis",
-                            iconColor: .green
-                        )
-                    }
-                    
-                    // Nutrition Plans Section
                     NavigationLink(destination: NutritionPlansView()) {
-                        MoreOptionCardNew(
-                            title: "Nutrition Plans".localized,
-                            subtitle: "Manage nutrition plans".localized,
-                            icon: "fork.knife",
-                            iconColor: .orange
-                        )
-                    }
-                    
-                    // Achievements Section
-                    NavigationLink(destination: AchievementsView()) {
-                        MoreOptionCardNew(
-                            title: "Achievements".localized,
-                            subtitle: "View your achievements".localized,
-                            icon: "trophy.fill",
-                            iconColor: .yellow
-                        )
-                    }
-                    
-                    // Training History Section
-                    NavigationLink(destination: TrainingHistoryView()) {
-                        MoreOptionCardNew(
-                            title: "Training History".localized,
-                            subtitle: "View your training history".localized,
-                            icon: "clock.fill",
-                            iconColor: .blue
-                        )
-                    }
-                    
-                    // Settings Section
-                    NavigationLink(destination: SettingsView()) {
-                        MoreOptionCardNew(
-                            title: "Settings".localized,
-                            subtitle: "Configure app settings".localized,
-                            icon: "gear",
-                            iconColor: .gray
-                        )
-                    }
-                    
-                    // Help & Support Section
-                    NavigationLink(destination: HelpSupportView()) {
-                        MoreOptionCardNew(
-                            title: "Help & Support".localized,
-                            subtitle: "Get help and support".localized,
-                            icon: "questionmark.circle.fill",
-                            iconColor: .blue
-                        )
-                    }
-                    
-                    // Power of 10 Section
-                    NavigationLink(destination: PowerOf10View()) {
-                        MoreOptionCardNew(
-                            title: "Power of 10".localized,
-                            subtitle: "View Power of 10 rankings".localized,
-                            icon: "list.number",
-                            iconColor: .purple
-                        )
-                    }
-                    
-                    // Coaches Corner Section
-                    NavigationLink(destination: CoachesCornerView()) {
-                        MoreOptionCardNew(
-                            title: "Coaches Corner".localized,
-                            subtitle: "Access coaching resources".localized,
-                            icon: "person.2.fill",
-                            iconColor: .red
-                        )
+                        Label("Nutrition Guide", systemImage: "fork.knife")
                     }
                 }
-                .padding()
+                
+                Section(header: Text("Settings")) {
+                    NavigationLink(destination: SettingsView()) {
+                        Label("Settings", systemImage: "gear")
+                    }
+                    
+                    NavigationLink(destination: ProfileSettingsView()) {
+                        Label("Profile", systemImage: "person.fill")
+                    }
+                }
+                
+                Section(header: Text("About")) {
+                    NavigationLink(destination: AboutAppView()) {
+                        Label("About", systemImage: "info.circle.fill")
+                    }
+                    
+                    NavigationLink(destination: ContactSupportView()) {
+                        Label("Contact", systemImage: "envelope.fill")
+                    }
+                }
             }
             .navigationTitle("More")
-            .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingCoachesCorner) {
+                CoachesCornerView()
+            }
+        }
+    }
+}
+
+struct AboutAppView: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("About Programs365")
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                Text("Programs365 is a comprehensive training and competition management app designed for athletes and coaches. Our mission is to provide accessible, high-quality training programs and resources to help athletes reach their full potential.")
+                    .font(.body)
+                
+                Text("Features")
+                    .font(.headline)
+                
+                VStack(alignment: .leading, spacing: 10) {
+                    FeatureRow(icon: "dumbbell.fill", text: "Customized Training Programs")
+                    FeatureRow(icon: "trophy.fill", text: "Competition Management")
+                    FeatureRow(icon: "figure.roll", text: "Para Athletics Support")
+                    FeatureRow(icon: "person.2.fill", text: "Coaches Corner")
+                    FeatureRow(icon: "bandage.fill", text: "Injury Prevention")
+                }
+                
+                Text("Version 1.0.0")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            .padding()
+        }
+        .navigationTitle("About")
+    }
+}
+
+struct ContactSupportView: View {
+    @State private var email = ""
+    @State private var message = ""
+    @State private var showingAlert = false
+    
+    var body: some View {
+        Form {
+            Section(header: Text("Contact Information")) {
+                TextField("Email", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocapitalization(.none)
+                
+                TextEditor(text: $message)
+                    .frame(height: 150)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+            }
+            
+            Section {
+                Button(action: sendMessage) {
+                    HStack {
+                        Spacer()
+                        Text("Send Message")
+                        Spacer()
+                    }
+                }
+            }
+        }
+        .navigationTitle("Contact Support")
+        .alert("Message Sent", isPresented: $showingAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Thank you for your message. We'll get back to you soon.")
+        }
+    }
+    
+    private func sendMessage() {
+        // In a real app, this would send the message to your backend
+        showingAlert = true
+        email = ""
+        message = ""
+    }
+}
+
+struct FeatureRow: View {
+    let icon: String
+    let text: String
+    
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundColor(.red)
+                .frame(width: 30)
+            Text(text)
         }
     }
 }

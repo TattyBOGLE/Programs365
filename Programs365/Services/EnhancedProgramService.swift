@@ -1,30 +1,99 @@
 import Foundation
 import SwiftUI
+import BackgroundTasks
 
-public class EnhancedProgramService: ObservableObject {
+@MainActor
+public final class EnhancedProgramService: ObservableObject {
     private let chatGPTService: ChatGPTService
     private var cache: [String: String] = [:]
-    @Published public private(set) var isLoading = false
-    @Published public private(set) var error: String?
+    @Published private(set) var isLoading = false
+    @Published private(set) var error: String?
+    @Published private(set) var generatedProgram: String?
+    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    private let userDefaults = UserDefaults.standard
+    private let inProgressKey = "inProgressPrograms"
     
-    public init(chatGPTService: ChatGPTService) {
-        self.chatGPTService = chatGPTService
+    public init(chatGPTService: ChatGPTService? = nil) {
+        self.chatGPTService = chatGPTService ?? ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey)
+        loadInProgressPrograms()
     }
     
     // MARK: - Program Generation
     
-    public func generateProgram(parameters: EnhancedProgramParameters, week: Int) async throws -> String {
-        let cacheKey = generateCacheKey(parameters: parameters, week: week)
+    public func generateProgram(parameters: EnhancedProgramParameters, week: Int = 1) async throws -> String {
+        isLoading = true
+        error = nil
         
-        if let cachedProgram = cache[cacheKey] {
-            return cachedProgram
+        do {
+            let prompt = generatePrompt(parameters: parameters, week: week)
+            let response = try await chatGPTService.generateWorkoutPlan(prompt: prompt)
+            generatedProgram = response.description
+            isLoading = false
+            return response.description
+        } catch {
+            self.error = error.localizedDescription
+            isLoading = false
+            throw error
+        }
+    }
+    
+    private func createPrompt(from parameters: EnhancedProgramParameters) -> String {
+        var prompt = """
+        Generate a detailed training program with the following parameters:
+        
+        Athlete Profile:
+        - Age Group: \(parameters.ageGroup.rawValue)
+        - Event: \(parameters.event.rawValue)
+        - Gender: \(parameters.gender.rawValue)
+        - Training History: \(parameters.trainingHistory) years
+        
+        Training Context:
+        - Term: \(parameters.term.rawValue)
+        - Period: \(parameters.period.rawValue)
+        - Periodization Model: \(parameters.periodizationModel.rawValue)
+        - Load Management: \(parameters.loadManagement.rawValue)
+        
+        Environmental Factors:
+        - Training Environment: \(parameters.environment.rawValue)
+        - Weather Conditions: \(parameters.weather.rawValue)
+        
+        Format the program as follows:
+        1. Use MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY as day headers in all caps
+        2. List the workout details under each day
+        3. Include rest and recovery recommendations
+        4. Add technical focus points
+        5. Specify key performance indicators
+        """
+        
+        if !parameters.facilityLimitations.isEmpty {
+            prompt += "\nFacility Limitations:"
+            parameters.facilityLimitations.forEach { limitation in
+                prompt += "\n- \(limitation.rawValue)"
+            }
         }
         
-        let prompt = generatePrompt(parameters: parameters, week: week)
-        let program = try await chatGPTService.generateResponse(prompt: prompt)
+        if !parameters.previousInjuries.isEmpty {
+            prompt += "\nPrevious Injuries:"
+            parameters.previousInjuries.forEach { injury in
+                prompt += "\n- \(injury)"
+            }
+        }
         
-        cache[cacheKey] = program
-        return program
+        if let menstrualPhase = parameters.menstrualPhase {
+            prompt += "\nFemale Athlete Considerations:"
+            prompt += "\n- Menstrual Phase: \(menstrualPhase.rawValue)"
+        }
+        
+        // Add event-specific considerations
+        prompt += generateEventSpecificPrompt(event: parameters.event)
+        
+        // Add periodization-specific guidelines
+        prompt += generatePeriodizationPrompt(model: parameters.periodizationModel, week: 1)
+        
+        // Add load management guidelines
+        prompt += generateLoadManagementPrompt(type: parameters.loadManagement)
+        
+        return prompt
     }
     
     // MARK: - Helper Methods
@@ -223,5 +292,62 @@ public class EnhancedProgramService: ObservableObject {
         }
         
         return prompt
+    }
+    
+    private func loadInProgressPrograms() {
+        let inProgressPrograms = getInProgressPrograms()
+        for (cacheKey, program) in inProgressPrograms {
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                do {
+                    let generatedProgram = try await self.resumeProgramGeneration(cacheKey: cacheKey, inProgressProgram: program)
+                    self.cache[cacheKey] = generatedProgram
+                } catch {
+                    print("Failed to resume program generation for \(cacheKey): \(error)")
+                }
+            }
+        }
+    }
+    
+    private func endBackgroundTask() {
+        if backgroundTask != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
+    }
+    
+    // MARK: - InProgressProgram
+    private struct InProgressProgram: Codable {
+        let parameters: EnhancedProgramParameters
+        let week: Int
+    }
+    
+    private func getInProgressPrograms() -> [String: InProgressProgram] {
+        guard let data = userDefaults.data(forKey: inProgressKey),
+              let programs = try? JSONDecoder().decode([String: InProgressProgram].self, from: data) else {
+            return [:]
+        }
+        return programs
+    }
+    
+    private func saveInProgressProgram(cacheKey: String, program: InProgressProgram) {
+        var programs = getInProgressPrograms()
+        programs[cacheKey] = program
+        if let data = try? JSONEncoder().encode(programs) {
+            userDefaults.set(data, forKey: inProgressKey)
+        }
+    }
+    
+    private func removeInProgressProgram(cacheKey: String) {
+        var programs = getInProgressPrograms()
+        programs.removeValue(forKey: cacheKey)
+        if let data = try? JSONEncoder().encode(programs) {
+            userDefaults.set(data, forKey: inProgressKey)
+        }
+    }
+    
+    private func resumeProgramGeneration(cacheKey: String, inProgressProgram: InProgressProgram) async throws -> String {
+        let prompt = generatePrompt(parameters: inProgressProgram.parameters, week: inProgressProgram.week)
+        return try await chatGPTService.generateWorkoutPlan(prompt: prompt).description
     }
 } 

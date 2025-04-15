@@ -976,16 +976,6 @@ struct InjuryMoreView: View {
                         )
                     }
                     
-                    // Settings Section
-                    NavigationLink(destination: SettingsView()) {
-                        InjuryMoreOptionCard(
-                            title: "Settings",
-                            subtitle: "App preferences and account settings",
-                            icon: "gearshape.fill",
-                            iconColor: .gray
-                        )
-                    }
-                    
                     // Training History Section
                     NavigationLink(destination: TrainingHistoryView()) {
                         InjuryMoreOptionCard(
@@ -1701,33 +1691,6 @@ struct NutrientTag: View {
             .padding(.vertical, 6)
             .background(Color.red.opacity(0.2))
             .cornerRadius(12)
-    }
-}
-
-// Settings View
-struct SettingsView: View {
-    var body: some View {
-        List {
-            Section(header: Text("Account")) {
-                Text("Profile Settings")
-                Text("Notifications")
-                Text("Privacy")
-            }
-            
-            Section(header: Text("App Settings")) {
-                Text("Theme")
-                Text("Language")
-                Text("Units")
-            }
-            
-            Section(header: Text("About")) {
-                Text("Version")
-                Text("Terms of Service")
-                Text("Privacy Policy")
-            }
-        }
-        .navigationTitle("Settings")
-        .background(Color.black.ignoresSafeArea())
     }
 }
 

@@ -26,17 +26,161 @@ public struct Achievement: Identifiable, Codable {
 public struct Coach: Identifiable, Codable {
     public let id: UUID
     public let name: String
-    public let specialty: String
-    public let achievement: String
-    public let notableAthletes: String
+    public let specialization: String
+    public let bio: String
+    public let imageName: String
+    public let location: String
     
-    public init(id: UUID = UUID(), name: String, specialty: String, achievement: String, notableAthletes: String) {
+    public init(id: UUID = UUID(), name: String, specialization: String, bio: String, imageName: String, location: String) {
         self.id = id
         self.name = name
-        self.specialty = specialty
-        self.achievement = achievement
-        self.notableAthletes = notableAthletes
+        self.specialization = specialization
+        self.bio = bio
+        self.imageName = imageName
+        self.location = location
     }
+}
+
+extension Coach {
+    public static let allCoaches: [Coach] = [
+        // Sprints & Hurdles Coaches
+        Coach(
+            name: "Jonas Tawiah-Dodoo",
+            specialization: "Elite Sprint & Jumps",
+            bio: "Based at Loughborough, specializes in elite sprint and jumps coaching.",
+            imageName: "coach_jonas",
+            location: "Loughborough"
+        ),
+        Coach(
+            name: "Richard Kilty",
+            specialization: "Sprints (60m-200m)",
+            bio: "Former European champion, now coaching sprints from 60m to 200m.",
+            imageName: "coach_richard",
+            location: "Teesside"
+        ),
+        Coach(
+            name: "Linford Christie",
+            specialization: "Sprints",
+            bio: "Olympic 100m champion, now coaching the next generation of sprinters.",
+            imageName: "coach_linford",
+            location: "London"
+        ),
+        Coach(
+            name: "Leon Baptiste",
+            specialization: "Sprints",
+            bio: "Former Commonwealth 200m champion, now coaching sprints at Loughborough.",
+            imageName: "coach_leon",
+            location: "Loughborough"
+        ),
+        
+        // Jumps Coaches
+        Coach(
+            name: "Aston Moore",
+            specialization: "Triple/Long Jump",
+            bio: "Coached Phillips Idowu and Olivia Breen to Commonwealth gold. Based in Birmingham.",
+            imageName: "coach_aston",
+            location: "Birmingham"
+        ),
+        Coach(
+            name: "John Shepherd",
+            specialization: "Long Jump & Sprints",
+            bio: "Specializes in long jump, sprints, and biomechanics. Based in London.",
+            imageName: "coach_john_s",
+            location: "London"
+        ),
+        Coach(
+            name: "Keith Hunter",
+            specialization: "Long/Triple Jump & Disability",
+            bio: "Based in Manchester. Coached athlete to European gold and para-athlete to World bronze.",
+            imageName: "coach_keith",
+            location: "Manchester"
+        ),
+        Coach(
+            name: "Shara Proctor",
+            specialization: "Long Jump",
+            bio: "Former GB long jumper, now coaching the next generation.",
+            imageName: "coach_shara",
+            location: "London"
+        ),
+        
+        // Disability & Para Athletics Coaches
+        Coach(
+            name: "Verona Elder",
+            specialization: "400m & Disability Athletics",
+            bio: "Team manager for disability athletics in London.",
+            imageName: "coach_verona",
+            location: "London"
+        ),
+        Coach(
+            name: "Ian Jones",
+            specialization: "Disability Athletics",
+            bio: "Former Paralympic sprinter, now coaching disability athletics in Manchester.",
+            imageName: "coach_ian",
+            location: "Manchester"
+        ),
+        Coach(
+            name: "Jenni Banks",
+            specialization: "Paralympic Wheelchair Athletics",
+            bio: "UK-wide wheelchair athletics coach.",
+            imageName: "coach_jenni",
+            location: "UK-wide"
+        ),
+        Coach(
+            name: "Vicky Tolfrey",
+            specialization: "Disability & Parasport",
+            bio: "Specialist in disability and parasport at Loughborough.",
+            imageName: "coach_vicky",
+            location: "Loughborough"
+        ),
+        Coach(
+            name: "Paula Dunn",
+            specialization: "Paralympic Head Coach",
+            bio: "Head coach for British Athletics Paralympic team in Manchester.",
+            imageName: "coach_paula",
+            location: "Manchester"
+        ),
+        Coach(
+            name: "Claire Buckle",
+            specialization: "Para-Athletics",
+            bio: "Para-athletics coach with Ability Consultancy in Lancashire.",
+            imageName: "coach_claire",
+            location: "Lancashire"
+        ),
+        Coach(
+            name: "Graham Pilkington",
+            specialization: "Lead Speed Coach",
+            bio: "Coached para-athlete to Commonwealth bronze. Based in Liverpool.",
+            imageName: "coach_graham",
+            location: "Liverpool"
+        ),
+        
+        // Middle Distance Coaches
+        Coach(
+            name: "Jenny Meadows",
+            specialization: "400m/800m & Conditioning",
+            bio: "Based in Wigan, specializing in 400m/800m and conditioning.",
+            imageName: "coach_jenny",
+            location: "Wigan"
+        ),
+        
+        // Multi-Events Coaches
+        Coach(
+            name: "Julie Hollman Dodoo",
+            specialization: "Multi-Events & Sprints",
+            bio: "Olympian and multi-events coach based in London.",
+            imageName: "coach_julie",
+            location: "London"
+        ),
+        
+        // Youth Development Coaches
+        Coach(
+            name: "Danny Sawyers",
+            specialization: "Youth Development",
+            bio: "Sprint coach with focus on youth development in Birmingham.",
+            imageName: "coach_danny",
+            location: "Birmingham"
+        )
+    ]
 }
 
 // Event model

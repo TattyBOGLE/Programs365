@@ -71,57 +71,54 @@ public final class ChatGPTService: ObservableObject {
     
     private func setupNetworkMonitoring() {
         guard !isMonitoring else { return }
+        isMonitoring = true
         
         wifiMonitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
-                await self?.updateWiFiStatus(path.status == .satisfied)
-                print("WiFi Status: \(path.status)")
+            Task { @MainActor [weak self] in
+                self?.hasWiFi = path.status == .satisfied
+                self?.updateNetworkStatus()
             }
         }
         
         cellularMonitor.pathUpdateHandler = { [weak self] path in
-            Task { @MainActor in
-                await self?.updateCellularStatus(path.status == .satisfied)
-                print("Cellular Status: \(path.status)")
+            Task { @MainActor [weak self] in
+                self?.hasCellular = path.status == .satisfied
+                self?.updateNetworkStatus()
             }
         }
         
         anyMonitor.pathUpdateHandler = { [weak self] path in
-            guard let self = self else { return }
-            Task { @MainActor in
-                await self.updateNetworkStatus(path)
+            Task { @MainActor [weak self] in
+                self?.networkStatus = path.status
+                self?.updateNetworkStatus()
             }
         }
         
         wifiMonitor.start(queue: queue)
         cellularMonitor.start(queue: queue)
         anyMonitor.start(queue: queue)
-        isMonitoring = true
     }
     
     @MainActor
-    private func updateWiFiStatus(_ isAvailable: Bool) async {
-        self.hasWiFi = isAvailable
+    private func updateNetworkStatus() {
+        isOffline = !hasWiFi && !hasCellular
     }
     
-    @MainActor
-    private func updateCellularStatus(_ isAvailable: Bool) async {
-        self.hasCellular = isAvailable
+    private func loadOfflineTemplates() {
+        // Load offline templates from a local file or bundle
+        // This is a placeholder - implement actual template loading
+        offlineProgramTemplates = [
+            "general": "Offline training program template",
+            "sprints": "Offline sprint training template",
+            "jumps": "Offline jumps training template",
+            "throws": "Offline throws training template"
+        ]
     }
     
-    @MainActor
-    private func updateNetworkStatus(_ path: NWPath) async {
-        self.networkStatus = path.status
-        self.isOffline = path.status != .satisfied
-        
-        print("Overall Network Status: \(path.status)")
-        print("Available Interfaces: WiFi=\(self.hasWiFi), Cellular=\(self.hasCellular)")
-        
-        if path.status == .satisfied {
-            print("Network connection is available")
-        } else {
-            print("Network connection is lost - Status: \(path.status)")
-        }
+    private func generateOfflineResponse(prompt: String) -> String {
+        // Generate a basic offline response based on the prompt
+        let event = extractEvent(from: prompt)
+        return offlineProgramTemplates[event.lowercased()] ?? offlineProgramTemplates["general"] ?? "Offline program template not available"
     }
     
     private func checkNetworkConnection() -> Bool {
@@ -160,6 +157,94 @@ public final class ChatGPTService: ObservableObject {
         }
         
         return false
+    }
+    
+    func generateWorkoutPlan(prompt: String, retryCount: Int = 0) async throws -> AttributedString {
+        // Check if API key is available
+        guard !apiKey.isEmpty else {
+            print("ERROR: No API key available")
+            return formatResponse(generateOfflineResponse(prompt: prompt))
+        }
+        
+        print("DEBUG: Starting to generate workout plan")
+        print("DEBUG: Network status - WiFi: \(hasWiFi), Cellular: \(hasCellular), Offline: \(isOffline)")
+        print("ChatGPTService: Starting workout plan generation")
+        print("ChatGPTService: Using API key of length: \(apiKey.count)")
+        print("ChatGPTService: Prompt length: \(prompt.count)")
+        
+        // Check cache first
+        let cacheKey = "\(prompt)"
+        if let cachedResponse = cache[cacheKey] {
+            print("ChatGPTService: Returning cached response")
+            return formatResponse(cachedResponse)
+        }
+        
+        // Reset progress
+        await MainActor.run {
+            self.progress = 0
+        }
+        print("ChatGPTService: Progress reset to 0")
+        
+        // Create a Task for progress updates
+        let progressTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+                if self.progress < 0.95 {
+                    self.progress += 0.05
+                }
+            }
+        }
+        
+        defer {
+            progressTask.cancel()
+            Task { @MainActor in
+                self.progress = 1.0
+            }
+        }
+        
+        // Check network status
+        if isOffline {
+            print("ChatGPTService: Network appears to be offline")
+            print("ChatGPTService: WiFi available: \(hasWiFi)")
+            print("ChatGPTService: Cellular available: \(hasCellular)")
+            
+            if !checkNetworkConnection() {
+                print("ChatGPTService: No network connection available, using offline template")
+                let offlineResponse = generateOfflineResponse(prompt: prompt)
+                return formatResponse(offlineResponse)
+            }
+        }
+        
+        print("ChatGPTService: Network is available, preparing API request")
+        
+        let headers = [
+            "Authorization": "Bearer \(apiKey)",
+            "Content-Type": "application/json"
+        ]
+        
+        print("ChatGPTService: Headers prepared with API key length: \(apiKey.count)")
+        
+        let event = extractEvent(from: prompt)
+        let systemPrompt = getEventSpecificSystemPrompt(for: event)
+        
+        let body: [String: Any] = [
+            "model": "gpt-3.5-turbo",
+            "messages": [
+                ["role": "system", "content": systemPrompt],
+                ["role": "user", "content": prompt]
+            ],
+            "temperature": 0.7,
+            "max_tokens": 1000,
+            "presence_penalty": 0.0,
+            "frequency_penalty": 0.0
+        ]
+        
+        print("ChatGPTService: Request body prepared with prompt length: \(prompt.count)")
+        
+        let response = try await performRequest(with: body, headers: headers, prompt: prompt, retryCount: retryCount)
+        print("ChatGPTService: Response received, length: \(response.count)")
+        cache[cacheKey] = response
+        return formatResponse(response)
     }
     
     private func formatResponse(_ response: String) -> AttributedString {
@@ -266,224 +351,6 @@ public final class ChatGPTService: ObservableObject {
     private func updateProgress(_ value: Double) async {
         await MainActor.run {
             self.progress = min(max(value, 0), 1)
-        }
-    }
-    
-    func generateWorkoutPlan(prompt: String, retryCount: Int = 0) async throws -> AttributedString {
-        print("DEBUG: Starting to generate workout plan")
-        print("DEBUG: Network status - WiFi: \(hasWiFi), Cellular: \(hasCellular), Offline: \(isOffline)")
-        print("ChatGPTService: Starting workout plan generation")
-        print("ChatGPTService: Using API key of length: \(apiKey.count)")
-        print("ChatGPTService: Prompt length: \(prompt.count)")
-        
-        // Check cache first
-        let cacheKey = "\(prompt)"
-        if let cachedResponse = cache[cacheKey] {
-            print("ChatGPTService: Returning cached response")
-            return formatResponse(cachedResponse)
-        }
-        
-        // Reset progress
-        await MainActor.run {
-            self.progress = 0
-        }
-        print("ChatGPTService: Progress reset to 0")
-        
-        // Create a Task for progress updates
-        let progressTask = Task { @MainActor in
-            while !Task.isCancelled {
-                try await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
-                if self.progress < 0.95 {
-                    self.progress += 0.05
-                }
-            }
-        }
-        
-        defer {
-            progressTask.cancel()
-            Task { @MainActor in
-                self.progress = 1.0
-            }
-        }
-        
-        // Check network status
-        if isOffline {
-            print("ChatGPTService: Network appears to be offline")
-            print("ChatGPTService: WiFi available: \(hasWiFi)")
-            print("ChatGPTService: Cellular available: \(hasCellular)")
-            
-            if !checkNetworkConnection() {
-                print("ChatGPTService: No network connection available, using offline template")
-                let offlineResponse = generateOfflineResponse(prompt: prompt)
-                return formatResponse(offlineResponse)
-            }
-        }
-        
-        print("ChatGPTService: Network is available, preparing API request")
-        
-        let headers = [
-            "Authorization": "Bearer \(apiKey)",
-            "Content-Type": "application/json"
-        ]
-        
-        print("ChatGPTService: Headers prepared with API key length: \(apiKey.count)")
-        
-        let event = extractEvent(from: prompt)
-        let systemPrompt = getEventSpecificSystemPrompt(for: event)
-        
-        let body: [String: Any] = [
-            "model": "gpt-3.5-turbo",
-            "messages": [
-                ["role": "system", "content": systemPrompt],
-                ["role": "user", "content": prompt]
-            ],
-            "temperature": 0.7,
-            "max_tokens": 1000,
-            "presence_penalty": 0.0,
-            "frequency_penalty": 0.0
-        ]
-        
-        print("ChatGPTService: Request body prepared with prompt length: \(prompt.count)")
-        
-        let response = try await performRequest(with: body, headers: headers, prompt: prompt, retryCount: retryCount)
-        print("ChatGPTService: Response received, length: \(response.count)")
-        cache[cacheKey] = response
-        return formatResponse(response)
-    }
-    
-    private func performRequest(with body: [String: Any], headers: [String: String], prompt: String, retryCount: Int) async throws -> String {
-        guard let url = URL(string: baseURL) else {
-            print("ChatGPTService: Invalid URL")
-            throw ChatGPTError.invalidURL
-        }
-        
-        print("ChatGPTService: Checking network connection")
-        // Check network status before making request
-        if !checkNetworkConnection() {
-            print("ChatGPTService: No network connection available")
-            throw ChatGPTError.noInternetConnection
-        }
-        
-        print("ChatGPTService: Network connection confirmed")
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = headers
-        request.timeoutInterval = 30 // Increased timeout
-        request.cachePolicy = .returnCacheDataElseLoad
-        
-        do {
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-            print("ChatGPTService: Request body serialized successfully")
-            if let bodyString = String(data: request.httpBody!, encoding: .utf8) {
-                print("ChatGPTService: Request body: \(bodyString)")
-            }
-        } catch {
-            print("ChatGPTService: Serialization error: \(error)")
-            throw ChatGPTError.serializationError(error)
-        }
-        
-        do {
-            let config = URLSessionConfiguration.default
-            config.timeoutIntervalForRequest = 30 // Increased timeout
-            config.timeoutIntervalForResource = 60 // Increased resource timeout
-            config.waitsForConnectivity = true
-            config.allowsCellularAccess = true
-            config.allowsExpensiveNetworkAccess = true
-            config.allowsConstrainedNetworkAccess = true
-            config.requestCachePolicy = .returnCacheDataElseLoad
-            
-            // Add retry logic for network errors
-            var currentRetry = 0
-            let maxRetries = 3
-            let retryDelay: UInt64 = 1_000_000_000 // 1 second
-            
-            while currentRetry < maxRetries {
-                do {
-                    let session = URLSession(configuration: config)
-                    let (data, response) = try await session.data(for: request)
-                    
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        throw ChatGPTError.invalidResponse
-                    }
-                    
-                    print("ChatGPTService: Response status code: \(httpResponse.statusCode)")
-                    
-                    // Print raw response data for debugging
-                    if let rawResponse = String(data: data, encoding: .utf8) {
-                        print("ChatGPTService: Raw API response: \(rawResponse)")
-                    }
-                    
-                    switch httpResponse.statusCode {
-                    case 200...299:
-                        struct ChatGPTResponse: Codable {
-                            let choices: [Choice]
-                            struct Choice: Codable {
-                                let message: Message
-                                struct Message: Codable {
-                                    let content: String
-                                }
-                            }
-                        }
-                        
-                        let decoder = JSONDecoder()
-                        do {
-                            let chatGPTResponse = try decoder.decode(ChatGPTResponse.self, from: data)
-                            guard let content = chatGPTResponse.choices.first?.message.content else {
-                                print("ChatGPTService: No content in response choices")
-                                throw ChatGPTError.invalidResponse
-                            }
-                            print("ChatGPTService: Successfully decoded response with content length: \(content.count)")
-                            return content
-                        } catch {
-                            print("ChatGPTService: Failed to decode response: \(error)")
-                            throw ChatGPTError.invalidResponse
-                        }
-                        
-                    case 401:
-                        print("ChatGPTService: Authentication error")
-                        throw ChatGPTError.authenticationError("Invalid API key")
-                    case 429:
-                        print("ChatGPTService: Rate limit error")
-                        if retryCount < 3 {
-                            try await Task.sleep(nanoseconds: retryDelay)
-                            return try await generateWorkoutPlan(prompt: prompt, retryCount: retryCount + 1).description
-                        }
-                        throw ChatGPTError.rateLimitError("Too many requests. Please wait a moment and try again.")
-                    case 500...599:
-                        print("ChatGPTService: Server error")
-                        if retryCount < 3 {
-                            try await Task.sleep(nanoseconds: retryDelay)
-                            return try await generateWorkoutPlan(prompt: prompt, retryCount: retryCount + 1).description
-                        }
-                        throw ChatGPTError.serverError("Server error. Please try again in a few moments.")
-                    default:
-                        print("ChatGPTService: Unexpected status code: \(httpResponse.statusCode)")
-                        throw ChatGPTError.httpError(httpResponse.statusCode)
-                    }
-                } catch let error as ChatGPTError {
-                    print("ChatGPT error: \(error.localizedDescription)")
-                    throw error
-                } catch {
-                    print("Network error (attempt \(currentRetry + 1)/\(maxRetries)): \(error.localizedDescription)")
-                    currentRetry += 1
-                    
-                    if currentRetry < maxRetries {
-                        try await Task.sleep(nanoseconds: retryDelay)
-                        continue
-                    }
-                    
-                    if error.localizedDescription.contains("timed out") {
-                        throw ChatGPTError.networkError("Request timed out. Please check your connection and try again.")
-                    }
-                    throw ChatGPTError.networkError("Connection error: \(error.localizedDescription)")
-                }
-            }
-            
-            throw ChatGPTError.networkError("Failed to connect after \(maxRetries) attempts")
-        } catch {
-            print("Network error: \(error.localizedDescription)")
-            throw error
         }
     }
     
@@ -808,476 +675,140 @@ public final class ChatGPTService: ObservableObject {
         }
     }
     
-    private func loadOfflineTemplates() {
-        // Load predefined templates for offline use
-        offlineProgramTemplates = [
-            "sprints": """
-            WEEKLY TRAINING PROGRAM FOR SPRINTS
-            
-            MONDAY
-            Focus: Speed and Power Development
-            
-            Warm-Up (40 minutes)
-            Dynamic Stretching (15 minutes):
-            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
-            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
-            • Walking Knee Hugs: 2 sets x 10 reps each leg
-            • Walking Quad Pulls: 2 sets x 10 reps each leg
-            • Walking High Knees: 2 sets x 20m
-            • Walking Butt Kicks: 2 sets x 20m
-            
-            Mobility Exercises (15 minutes):
-            • Hip Circles: 2 sets x 10 reps each direction
-            • Ankle Mobility: 2 sets x 15 reps each foot
-            • Shoulder Mobility: 2 sets x 12 reps each arm
-            • Spine Mobility: 2 sets x 8 reps each direction
-            • Hip Openers: 2 sets x 10 reps each side
-            • Thoracic Bridge: 2 sets x 8 reps
-            
-            Light Jogging (10 minutes):
-            • Easy pace jogging with dynamic movements
-            • Include high knees, butt kicks, and side shuffles
-            
-            TUESDAY
-            Focus: Strength and Power
-            
-            Warm-Up (40 minutes)
-            Dynamic Stretching (15 minutes):
-            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
-            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
-            • Walking Knee Hugs: 2 sets x 10 reps each leg
-            • Walking Quad Pulls: 2 sets x 10 reps each leg
-            • Walking High Knees: 2 sets x 20m
-            • Walking Butt Kicks: 2 sets x 20m
-            
-            Mobility Exercises (15 minutes):
-            • Hip Circles: 2 sets x 10 reps each direction
-            • Ankle Mobility: 2 sets x 15 reps each foot
-            • Shoulder Mobility: 2 sets x 12 reps each arm
-            • Spine Mobility: 2 sets x 8 reps each direction
-            • Hip Openers: 2 sets x 10 reps each side
-            • Thoracic Bridge: 2 sets x 8 reps
-            
-            Light Jogging (10 minutes):
-            • Easy pace jogging with dynamic movements
-            • Include high knees, butt kicks, and side shuffles
-            
-            WEDNESDAY
-            Focus: Recovery and Technique
-            
-            Warm-Up (15 minutes)
-            • Light jogging
-            • Dynamic stretching
-            
-            Technique Work (30 minutes)
-            • Block starts: 6-8 reps
-            • Acceleration drills
-            • Form running
-            
-            Light Conditioning (20 minutes)
-            • Circuit training with bodyweight exercises
-            
-            Cool-Down (15 minutes)
-            • Light stretching
-            
-            THURSDAY
-            Focus: Speed Endurance
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Speed Endurance (40 minutes)
-            • 6 x 150m at 85% effort with 3-minute recovery
-            • 4 x 200m at 80% effort with 4-minute recovery
-            
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
-            
-            FRIDAY
-            Focus: Strength and Power
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Plyometric Training (30 minutes)
-            • Box jumps: 4 sets x 8 reps
-            • Depth jumps: 3 sets x 6 reps
-            • Bounding: 3 sets x 20m
-            
-            Upper Body Strength (30 minutes)
-            • Bench press: 4 sets x 6 reps
-            • Pull-ups: 3 sets x max reps
-            • Medicine ball throws: 3 sets x 10 reps
-            
-            Cool-Down (15 minutes)
-            • Light stretching
-            
-            SATURDAY
-            Focus: Competition Simulation
-            
-            Warm-Up (20 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            • Sprint drills
-            
-            Competition Simulation (40 minutes)
-            • 3 x 100m at race pace with full recovery
-            • 2 x 200m at race pace with full recovery
-            
-            Cool-Down (20 minutes)
-            • Light jogging
-            • Static stretching
-            
-            SUNDAY
-            Focus: Active Recovery
-            
-            Light Activity (30-45 minutes)
-            • Swimming, cycling, or light jogging
-            
-            Mobility Work (20 minutes)
-            • Foam rolling
-            • Dynamic stretching
-            
-            Recovery Focus
-            • Hydration
-            • Proper nutrition
-            • Adequate sleep
-            """,
-            
-            "middleDistance": """
-            WEEKLY TRAINING PROGRAM FOR MIDDLE DISTANCE
-            
-            MONDAY
-            Focus: Speed and Anaerobic Capacity
-            
-            Warm-Up (40 minutes)
-            Dynamic Stretching (15 minutes):
-            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
-            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
-            • Walking Knee Hugs: 2 sets x 10 reps each leg
-            • Walking Quad Pulls: 2 sets x 10 reps each leg
-            • Walking High Knees: 2 sets x 20m
-            • Walking Butt Kicks: 2 sets x 20m
-            
-            Mobility Exercises (15 minutes):
-            • Hip Circles: 2 sets x 10 reps each direction
-            • Ankle Mobility: 2 sets x 15 reps each foot
-            • Shoulder Mobility: 2 sets x 12 reps each arm
-            • Spine Mobility: 2 sets x 8 reps each direction
-            • Hip Openers: 2 sets x 10 reps each side
-            • Thoracic Bridge: 2 sets x 8 reps
-            
-            Light Jogging (10 minutes):
-            • Easy pace jogging with dynamic movements
-            • Include high knees, butt kicks, and side shuffles
-            
-            TUESDAY
-            Focus: Strength and Power
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Strength Training (45 minutes)
-            • Squats: 4 sets x 8 reps
-            • Deadlifts: 4 sets x 6 reps
-            • Lunges: 3 sets x 12 reps each leg
-            • Calf raises: 3 sets x 15 reps
-            
-            Core Work (15 minutes)
-            • Planks: 3 x 45 seconds
-            • Russian twists: 3 x 20 reps
-            • Leg raises: 3 x 15 reps
-            
-            Cool-Down (15 minutes)
-            • Light stretching
-            
-            WEDNESDAY
-            Focus: Aerobic Base
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Aerobic Run (45-60 minutes)
-            • Steady-state running at 70-75% effort
-            • Focus on maintaining consistent pace
-            
-            Cool-Down (15 minutes)
-            • Light stretching
-            
-            THURSDAY
-            Focus: Threshold Training
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Threshold Work (40 minutes)
-            • 3 x 1000m at threshold pace with 3-minute recovery
-            • 4 x 800m at threshold pace with 2-minute recovery
-            
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
-            
-            FRIDAY
-            Focus: Recovery and Technique
-            
-            Warm-Up (15 minutes)
-            • Light jogging
-            • Dynamic stretching
-            
-            Technique Work (30 minutes)
-            • Form running drills
-            • Stride length exercises
-            • Cadence work
-            
-            Light Conditioning (20 minutes)
-            • Circuit training with bodyweight exercises
-            
-            Cool-Down (15 minutes)
-            • Light stretching
-            
-            SATURDAY
-            Focus: Race Simulation
-            
-            Warm-Up (20 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            • Light jogging
-            
-            Race Simulation (40 minutes)
-            • 2 x 800m at race pace with full recovery
-            • 1 x 1200m at race pace with full recovery
-            
-            Cool-Down (20 minutes)
-            • Light jogging
-            • Static stretching
-            
-            SUNDAY
-            Focus: Active Recovery
-            
-            Light Activity (30-45 minutes)
-            • Swimming, cycling, or light jogging
-            
-            Mobility Work (20 minutes)
-            • Foam rolling
-            • Dynamic stretching
-            
-            Recovery Focus
-            • Hydration
-            • Proper nutrition
-            • Adequate sleep
-            """,
-            
-            "longDistance": """
-            WEEKLY TRAINING PROGRAM FOR LONG DISTANCE
-            
-            MONDAY
-            Focus: Aerobic Base
-            
-            Warm-Up (40 minutes)
-            Dynamic Stretching (15 minutes):
-            • Arm Circles: 2 sets x 10 reps forward, 10 reps backward
-            • Leg Swings: 2 sets x 12 reps each leg (front-back and side-to-side)
-            • Walking Knee Hugs: 2 sets x 10 reps each leg
-            • Walking Quad Pulls: 2 sets x 10 reps each leg
-            • Walking High Knees: 2 sets x 20m
-            • Walking Butt Kicks: 2 sets x 20m
-            
-            Mobility Exercises (15 minutes):
-            • Hip Circles: 2 sets x 10 reps each direction
-            • Ankle Mobility: 2 sets x 15 reps each foot
-            • Shoulder Mobility: 2 sets x 12 reps each arm
-            • Spine Mobility: 2 sets x 8 reps each direction
-            • Hip Openers: 2 sets x 10 reps each side
-            • Thoracic Bridge: 2 sets x 8 reps
-            
-            Light Jogging (10 minutes):
-            • Easy pace jogging with dynamic movements
-            • Include high knees, butt kicks, and side shuffles
-            
-            TUESDAY
-            Focus: Speed and Anaerobic Capacity
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Speed Work (40 minutes)
-            • 8 x 400m at 85% effort with 2-minute recovery
-            • 4 x 800m at 80% effort with 3-minute recovery
-            
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
-            
-            WEDNESDAY
-            Focus: Recovery and Technique
-            
-            Warm-Up (15 minutes)
-            • Light jogging
-            • Dynamic stretching
-            
-            Technique Work (30 minutes)
-            • Form running drills
-            • Stride length exercises
-            • Cadence work
-            
-            Light Conditioning (20 minutes)
-            • Circuit training with bodyweight exercises
-            
-            Cool-Down (15 minutes)
-            • Light stretching
-            
-            THURSDAY
-            Focus: Threshold Training
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Threshold Work (50 minutes)
-            • 4 x 1200m at threshold pace with 3-minute recovery
-            • 2 x 1600m at threshold pace with 4-minute recovery
-            
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
-            
-            FRIDAY
-            Focus: Strength and Power
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Strength Training (45 minutes)
-            • Squats: 4 sets x 10 reps
-            • Deadlifts: 4 sets x 8 reps
-            • Lunges: 3 sets x 12 reps each leg
-            • Calf raises: 3 sets x 15 reps
-            
-            Core Work (15 minutes)
-            • Planks: 3 x 60 seconds
-            • Russian twists: 3 x 20 reps
-            • Leg raises: 3 x 15 reps
-            
-            Cool-Down (15 minutes)
-            • Light stretching
-            
-            SATURDAY
-            Focus: Long Run
-            
-            Warm-Up (15 minutes)
-            • Dynamic stretching
-            • Mobility exercises
-            
-            Long Run (90-120 minutes)
-            • Steady-state running at 65-70% effort
-            • Focus on building endurance
-            
-            Cool-Down (15 minutes)
-            • Light jogging
-            • Static stretching
-            
-            SUNDAY
-            Focus: Active Recovery
-            
-            Light Activity (30-45 minutes)
-            • Swimming, cycling, or light jogging
-            
-            Mobility Work (20 minutes)
-            • Foam rolling
-            • Dynamic stretching
-            
-            Recovery Focus
-            • Hydration
-            • Proper nutrition
-            • Adequate sleep
-            """
-        ]
-    }
-    
-    private func generateOfflineResponse(prompt: String) -> String {
-        // Extract key information from the prompt
-        let event = extractEvent(from: prompt)
-        let ageGroup = extractAge(from: prompt)
-        let term = extractTerm(from: prompt)
-        let period = extractPeriod(from: prompt)
-        
-        // Get the appropriate template based on the event
-        var template = offlineProgramTemplates["sprints"] ?? ""
-        
-        if event.lowercased().contains("middle") || event.lowercased().contains("800") || event.lowercased().contains("1500") {
-            template = offlineProgramTemplates["middleDistance"] ?? ""
-        } else if event.lowercased().contains("long") || event.lowercased().contains("5000") || event.lowercased().contains("10000") {
-            template = offlineProgramTemplates["longDistance"] ?? ""
+    private func performRequest(with body: [String: Any], headers: [String: String], prompt: String, retryCount: Int) async throws -> String {
+        guard let url = URL(string: baseURL) else {
+            print("ChatGPTService: Invalid URL")
+            throw ChatGPTError.invalidURL
         }
         
-        // Customize the template based on age group, term, and period
-        var customizedTemplate = template
-        
-        // Add age group specific modifications
-        if ageGroup.contains("U12") || ageGroup.contains("U14") {
-            // Younger age groups - bodyweight exercises only
-            customizedTemplate = customizedTemplate.replacingOccurrences(
-                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
-                with: "Strength Training (45 minutes)\n• Bodyweight squats: 3 sets x 12 reps\n• Push-ups: 3 sets x max reps\n• Plank holds: 3 sets x 30 seconds\n• Jumping jacks: 3 sets x 20 reps\n• Mountain climbers: 3 sets x 20 reps\n• Burpees: 3 sets x 10 reps"
-            )
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "4 x 100m", with: "3 x 80m")
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "6 x 200m", with: "4 x 150m")
-        } else if ageGroup.contains("U16") {
-            // U16 - introduction to basic weights with focus on form
-            customizedTemplate = customizedTemplate.replacingOccurrences(
-                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
-                with: "Strength Training (45 minutes)\n• Bodyweight squats: 3 sets x 15 reps\n• Push-ups: 3 sets x max reps\n• Light dumbbell squats: 3 sets x 12 reps\n• Light dumbbell lunges: 3 sets x 10 reps each leg\n• Medicine ball throws: 3 sets x 8 reps\n• Plank variations: 3 sets x 45 seconds"
-            )
-        } else if ageGroup.contains("U18") {
-            // U18 - moderate weights with focus on technique
-            customizedTemplate = customizedTemplate.replacingOccurrences(
-                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
-                with: "Strength Training (45 minutes)\n• Barbell squats: 4 sets x 8 reps\n• Romanian deadlifts: 3 sets x 10 reps\n• Bench press: 3 sets x 10 reps\n• Pull-ups: 3 sets x max reps\n• Box jumps: 3 sets x 10 reps\n• Medicine ball throws: 3 sets x 12 reps"
-            )
-        } else if ageGroup.contains("U20") {
-            // U20 - advanced strength training
-            customizedTemplate = customizedTemplate.replacingOccurrences(
-                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
-                with: "Strength Training (45 minutes)\n• Barbell squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Bench press: 4 sets x 6 reps\n• Pull-ups: 4 sets x max reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps\n• Power cleans: 3 sets x 5 reps"
-            )
-        } else {
-            // Senior - full strength program
-            customizedTemplate = customizedTemplate.replacingOccurrences(
-                of: "Strength Training (45 minutes)\n• Squats: 4 sets x 6 reps\n• Deadlifts: 4 sets x 5 reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps",
-                with: "Strength Training (45 minutes)\n• Barbell squats: 4 sets x 5 reps\n• Deadlifts: 4 sets x 5 reps\n• Bench press: 4 sets x 5 reps\n• Pull-ups: 4 sets x max reps\n• Box jumps: 3 sets x 8 reps\n• Medicine ball throws: 3 sets x 10 reps\n• Power cleans: 3 sets x 5 reps\n• Snatch pulls: 3 sets x 5 reps"
-            )
+        print("ChatGPTService: Checking network connection")
+        // Check network status before making request
+        if !checkNetworkConnection() {
+            print("ChatGPTService: No network connection available")
+            throw ChatGPTError.noInternetConnection
         }
         
-        // Add term specific modifications
-        if term.contains("Pre-Competition") {
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "70-75% effort", with: "75-80% effort")
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "80% effort", with: "85% effort")
-        } else if term.contains("Competition") {
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "70-75% effort", with: "80-85% effort")
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "80% effort", with: "90% effort")
+        print("ChatGPTService: Network connection confirmed")
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = headers
+        request.timeoutInterval = 30 // Increased timeout
+        request.cachePolicy = .returnCacheDataElseLoad
+        
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            print("ChatGPTService: Request body serialized successfully")
+            if let bodyString = String(data: request.httpBody!, encoding: .utf8) {
+                print("ChatGPTService: Request body: \(bodyString)")
+            }
+        } catch {
+            print("ChatGPTService: Serialization error: \(error)")
+            throw ChatGPTError.serializationError(error)
         }
         
-        // Add period specific modifications
-        if period.contains("General") {
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "4 x 100m", with: "3 x 80m")
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "6 x 200m", with: "4 x 150m")
-        } else if period.contains("Specific") {
-            customizedTemplate = customizedTemplate.replacingOccurrences(of: "70-75% effort", with: "75-80% effort")
+        do {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 30 // Increased timeout
+            config.timeoutIntervalForResource = 60 // Increased resource timeout
+            config.waitsForConnectivity = true
+            config.allowsCellularAccess = true
+            config.allowsExpensiveNetworkAccess = true
+            config.allowsConstrainedNetworkAccess = true
+            config.requestCachePolicy = .returnCacheDataElseLoad
+            
+            // Add retry logic for network errors
+            var currentRetry = 0
+            let maxRetries = 3
+            let retryDelay: UInt64 = 1_000_000_000 // 1 second
+            
+            while currentRetry < maxRetries {
+                do {
+                    let session = URLSession(configuration: config)
+                    let (data, response) = try await session.data(for: request)
+                    
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        throw ChatGPTError.invalidResponse
+                    }
+                    
+                    print("ChatGPTService: Response status code: \(httpResponse.statusCode)")
+                    
+                    // Print raw response data for debugging
+                    if let rawResponse = String(data: data, encoding: .utf8) {
+                        print("ChatGPTService: Raw API response: \(rawResponse)")
+                    }
+                    
+                    switch httpResponse.statusCode {
+                    case 200...299:
+                        struct ChatGPTResponse: Codable {
+                            let choices: [Choice]
+                            struct Choice: Codable {
+                                let message: Message
+                                struct Message: Codable {
+                                    let content: String
+                                }
+                            }
+                        }
+                        
+                        let decoder = JSONDecoder()
+                        do {
+                            let chatGPTResponse = try decoder.decode(ChatGPTResponse.self, from: data)
+                            guard let content = chatGPTResponse.choices.first?.message.content else {
+                                print("ChatGPTService: No content in response choices")
+                                throw ChatGPTError.invalidResponse
+                            }
+                            print("ChatGPTService: Successfully decoded response with content length: \(content.count)")
+                            return content
+                        } catch {
+                            print("ChatGPTService: Failed to decode response: \(error)")
+                            throw ChatGPTError.invalidResponse
+                        }
+                        
+                    case 401:
+                        print("ChatGPTService: Authentication error")
+                        throw ChatGPTError.authenticationError("Invalid API key")
+                    case 429:
+                        print("ChatGPTService: Rate limit error")
+                        if retryCount < 3 {
+                            try await Task.sleep(nanoseconds: retryDelay)
+                            return try await generateWorkoutPlan(prompt: prompt, retryCount: retryCount + 1).description
+                        }
+                        throw ChatGPTError.rateLimitError("Too many requests. Please wait a moment and try again.")
+                    case 500...599:
+                        print("ChatGPTService: Server error")
+                        if retryCount < 3 {
+                            try await Task.sleep(nanoseconds: retryDelay)
+                            return try await generateWorkoutPlan(prompt: prompt, retryCount: retryCount + 1).description
+                        }
+                        throw ChatGPTError.serverError("Server error. Please try again in a few moments.")
+                    default:
+                        print("ChatGPTService: Unexpected status code: \(httpResponse.statusCode)")
+                        throw ChatGPTError.httpError(httpResponse.statusCode)
+                    }
+                } catch let error as ChatGPTError {
+                    print("ChatGPT error: \(error.localizedDescription)")
+                    throw error
+                } catch {
+                    print("Network error (attempt \(currentRetry + 1)/\(maxRetries)): \(error.localizedDescription)")
+                    currentRetry += 1
+                    
+                    if currentRetry < maxRetries {
+                        try await Task.sleep(nanoseconds: retryDelay)
+                        continue
+                    }
+                    
+                    if error.localizedDescription.contains("timed out") {
+                        throw ChatGPTError.networkError("Request timed out. Please check your connection and try again.")
+                    }
+                    throw ChatGPTError.networkError("Connection error: \(error.localizedDescription)")
+                }
+            }
+            
+            throw ChatGPTError.networkError("Failed to connect after \(maxRetries) attempts")
+        } catch {
+            print("Network error: \(error.localizedDescription)")
+            throw error
         }
-        
-        // Cache the offline response
-        cache[prompt] = customizedTemplate
-        
-        return customizedTemplate
     }
     
     deinit {

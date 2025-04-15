@@ -3,6 +3,7 @@ import UIKit
 
 struct DashboardView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
+    private let chatGPTService = ChatGPTService(apiKey: AppConfig.API.chatGPTApiKey)
     
     init() {
         // Modify tab bar appearance
@@ -50,7 +51,7 @@ struct DashboardView: View {
                     Label("Competitions".localized, systemImage: "trophy.fill")
                 }
             
-            ParaAthletesView(chatGPTService: ChatGPTService(apiKey: "YOUR_API_KEY"))
+            ParaAthletesView(chatGPTService: chatGPTService)
                 .tabItem {
                     Label("Para".localized, systemImage: "figure.roll")
                 }

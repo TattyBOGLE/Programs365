@@ -28,61 +28,6 @@ struct PowerOf10View: View {
     }
 }
 
-struct CoachesCornerView: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedTab = 0
-    @State private var showingNewResource = false
-    @State private var showingDeleteConfirmation = false
-    @State private var resourceToDelete: CoachResource?
-    
-    let tabs = ["Resources", "Videos", "Articles"]
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Tab Bar
-            Picker("", selection: $selectedTab) {
-                ForEach(0..<tabs.count, id: \.self) { index in
-                    Text(tabs[index]).tag(index)
-                }
-            }
-            .pickerStyle(SegmentedPickerStyle())
-            .padding()
-            
-            // Content
-            TabView(selection: $selectedTab) {
-                ResourcesListView()
-                    .tag(0)
-                
-                VideosListView()
-                    .tag(1)
-                
-                ArticlesListView()
-                    .tag(2)
-            }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(.white)
-                }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showingNewResource = true }) {
-                    Image(systemName: "plus")
-                        .foregroundColor(.white)
-                }
-            }
-        }
-        .sheet(isPresented: $showingNewResource) {
-            NewResourceView()
-        }
-    }
-}
-
 // MARK: - Supporting Views
 
 struct ResourcesListView: View {

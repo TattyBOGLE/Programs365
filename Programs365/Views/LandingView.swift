@@ -197,111 +197,194 @@ struct AdCard: View {
 }
 
 struct LandingView: View {
-    @State private var navigateToPrograms = false
-    
     var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Hero Banner
-                    ZStack(alignment: .bottomLeading) {
-                        Image("England Athletics")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
-                            .clipped()
-                            .overlay(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [.clear, .black.opacity(0.8)]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
+        ScrollView {
+            VStack(spacing: 0) {
+                // Hero Banner
+                ZStack(alignment: .leading) {
+                    Image("track_hero_banner")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 400)
+                        .clipped()
+                        .overlay(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.black.opacity(0.7),
+                                    Color.black.opacity(0.5)
+                                ]),
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
-                        
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Welcome to Track&field365".localized)
-                                .font(.system(size: 40, weight: .heavy))
+                        )
+                    
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(alignment: .bottom, spacing: 0) {
+                            Text("Program")
+                                .font(.system(size: 50, weight: .bold))
                                 .foregroundColor(.white)
                             
-                            Text("Your personalized training companion".localized)
-                                .font(.title3)
-                                .foregroundColor(.white.opacity(0.9))
-                        }
-                        .padding()
-                    }
-                    
-                    // Featured Categories
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("Featured Categories".localized)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal)
-                        
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 20) {
-                                LandingProgramCard(
-                                    title: "Track Events".localized,
-                                    description: "Sprints, middle distance, and long distance training programs".localized,
-                                    icon: "figure.run"
-                                )
-                                
-                                LandingProgramCard(
-                                    title: "Field Events".localized,
-                                    description: "Jumping and throwing events training programs".localized,
-                                    icon: "figure.disc.sports"
-                                )
-                                
-                                LandingProgramCard(
-                                    title: "Para Athletics".localized,
-                                    description: "Specialized programs for para-athletes".localized,
-                                    icon: "figure.roll"
-                                )
+                            HStack(alignment: .bottom, spacing: 0) {
+                                Text("36")
+                                    .font(.system(size: 50, weight: .bold))
+                                    .foregroundColor(.white)
+                                Text("5")
+                                    .font(.system(size: 30, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .baselineOffset(20)
                             }
-                            .padding(.horizontal)
+                        }
+                        
+                        Text("Professional Training Programs For Coaches Who Demand Excellence")
+                            .font(.title3)
+                            .foregroundColor(.white.opacity(0.9))
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: 300)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
+                }
+                
+                // Featured Section
+                VStack(alignment: .leading, spacing: 24) {
+                    Text("Featured")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 32)
+                    
+                    HStack(alignment: .bottom, spacing: 0) {
+                        Text("Programs")
+                            .font(.system(size: 40))
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                        
+                        Text("365")
+                            .font(.system(size: 20))
+                            .fontWeight(.bold)
+                            .foregroundColor(.red)
+                            .baselineOffset(-20)
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    // Program Categories Grid
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                        // Sprints Card
+                        NavigationLink(destination: ProgramsView(initialCategory: "Sprints")) {
+                            ProgramCategoryCard(
+                                title: "Sprints",
+                                description: "Master explosive speed and power with our elite sprint training programs",
+                                iconName: "figure.run"
+                            )
+                        }
+                        
+                        // Middle Distance Card
+                        NavigationLink(destination: ProgramsView(initialCategory: "Middle Distance")) {
+                            ProgramCategoryCard(
+                                title: "Middle Distance",
+                                description: "Build the perfect balance of speed and endurance",
+                                iconName: "figure.run"
+                            )
+                        }
+                        
+                        // Long Distance Card
+                        NavigationLink(destination: ProgramsView(initialCategory: "Long Distance")) {
+                            ProgramCategoryCard(
+                                title: "Long Distance",
+                                description: "Develop endurance and stamina for distance events",
+                                iconName: "figure.run"
+                            )
+                        }
+                        
+                        // Jumps Card
+                        NavigationLink(destination: ProgramsView(initialCategory: "Jumps")) {
+                            ProgramCategoryCard(
+                                title: "Jumps",
+                                description: "Perfect your technique and power for jumping events",
+                                iconName: "figure.jumprope"
+                            )
                         }
                     }
-                    .padding(.vertical)
-                    
-                    // Our Partners Section
-                    VStack(alignment: .leading, spacing: 20) {
-                        Text("Our Partners")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                    }
-                    .padding(.vertical)
-                    
-                    // Advertisements
-                    VStack(spacing: 0) {
-                        AdCard(
-                            title: "Xplore Disability".localized,
-                            description: "Join our inclusive athletics program".localized,
-                            imageName: "xplore.disability",
-                            backgroundColor: .blue
-                        ) {}
-                        
-                        AdCard(
-                            title: "Sale Harriers".localized,
-                            description: "Elite training programs for aspiring athletes".localized,
-                            imageName: "sale.harriers",
-                            backgroundColor: .red
-                        ) {}
-                        
-                        AdCard(
-                            title: "Active Life".localized,
-                            description: "Professional sports medicine and rehabilitation".localized,
-                            imageName: "active.life",
-                            backgroundColor: .green
-                        ) {}
-                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 32)
                 }
+                
+                // Advertisements Section
+                VStack(spacing: 0) {
+                    // Xplore Disability Ad
+                    AdCard(
+                        title: "Xplore Disability",
+                        description: "Join our inclusive athletics program",
+                        imageName: "xplore.disability",
+                        backgroundColor: .blue
+                    ) {}
+                    
+                    // Sale Harriers Ad
+                    AdCard(
+                        title: "Sale Harriers",
+                        description: "Elite training programs for aspiring athletes",
+                        imageName: "sale.harriers",
+                        backgroundColor: .red
+                    ) {}
+                    
+                    // Active Life Ad
+                    AdCard(
+                        title: "Active Life",
+                        description: "Professional sports medicine and rehabilitation",
+                        imageName: "active.life",
+                        backgroundColor: .green
+                    ) {}
+                }
+                .padding(.top, 16)
             }
-            .background(Color.black.edgesIgnoringSafeArea(.all))
-            .navigationBarHidden(true)
         }
+        .background(Color.black.edgesIgnoringSafeArea(.all))
+        .navigationBarHidden(true)
+    }
+}
+
+struct ProgramCategoryCard: View {
+    let title: String
+    let description: String
+    let iconName: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Icon
+            Image(systemName: iconName)
+                .font(.title)
+                .foregroundColor(.red)
+                .padding(.bottom, 4)
+            
+            // Title
+            Text(title)
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            // Description
+            Text(description)
+                .font(.subheadline)
+                .foregroundColor(.gray)
+                .lineLimit(3)
+            
+            Spacer()
+            
+            // Start Training Button
+            HStack {
+                Text("Start Training")
+                    .foregroundColor(.red)
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.red)
+            }
+            .font(.subheadline)
+            .padding(.top, 8)
+        }
+        .padding(20)
+        .frame(height: 200)
+        .background(Color(UIColor.systemGray6))
+        .cornerRadius(16)
     }
 }
 
@@ -327,6 +410,10 @@ struct PartnerLogo: View {
     }
 }
 
-#Preview {
-    LandingView()
+struct LandingView_Previews: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            LandingView()
+        }
+    }
 } 
